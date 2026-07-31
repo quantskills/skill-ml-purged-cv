@@ -47,6 +47,7 @@ def language_check(failures: list[str]) -> None:
     except Exception as exc:
         failures.append(f"Python package import failed: {exc}")
     run([sys.executable, "-m", "pytest", "-q"], failures)
+    run([sys.executable, "-m", "mypy", "src", "tests", "tasks"], failures)
     run([sys.executable, "-m", "ruff", "check", "."], failures)
     run([sys.executable, "-m", "ruff", "format", "--check", "."], failures)
 

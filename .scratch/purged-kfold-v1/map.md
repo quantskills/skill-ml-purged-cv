@@ -20,7 +20,7 @@ Status: resolved
 
 - ADR-0001 through ADR-0009 define the accepted architecture and domain boundaries.
 - Slice 1 is a vertical Purged K-Fold evaluation path; CPCV, walk-forward, holdout governance, nested HPO, and persistent writers are later slices.
-- The published spec follows the project PRD template and is ready for implementation without further triage.
+- The published spec follows the project PRD template and has passed final local acceptance.
 - The implementation tickets are vertical, independently verifiable slices; the former horizontal layer tickets have been superseded.
 - All Slice 1 tickets are resolved. Later work remains planned and requires a separately claimed frontier ticket.
 

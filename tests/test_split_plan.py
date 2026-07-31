@@ -51,24 +51,22 @@ def test_user_can_inspect_a_minimal_leakage_safe_split_plan() -> None:
 
 def test_dataset_digest_changes_when_relevant_input_changes() -> None:
     sessions = np.array(["2025-01-02", "2025-01-03"], dtype="datetime64[D]")
-    common = {
-        "sample_ids": ("s0", "s1"),
-        "session_axis": sessions,
-        "sessions": sessions,
-        "information_intervals": (
-            InformationInterval(sessions[0], sessions[0]),
-            InformationInterval(sessions[1], sessions[1]),
-        ),
-        "targets": np.array([0.0, 1.0]),
-    }
-    original = ValidationDataset(
-        **common,
-        features=np.array([[1.0], [2.0]]),
-    )
-    changed = ValidationDataset(
-        **common,
-        features=np.array([[1.0], [3.0]]),
-    )
+
+    def dataset_with(features: np.ndarray) -> ValidationDataset:
+        return ValidationDataset(
+            sample_ids=("s0", "s1"),
+            session_axis=sessions,
+            sessions=sessions,
+            information_intervals=(
+                InformationInterval(sessions[0], sessions[0]),
+                InformationInterval(sessions[1], sessions[1]),
+            ),
+            targets=np.array([0.0, 1.0]),
+            features=features,
+        )
+
+    original = dataset_with(np.array([[1.0], [2.0]]))
+    changed = dataset_with(np.array([[1.0], [3.0]]))
 
     assert original.digest != changed.digest
 

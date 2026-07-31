@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Callable
+
 import numpy as np
 import pytest
 
@@ -110,14 +112,16 @@ def test_complete_purged_kfold_has_contiguous_unique_test_coverage() -> None:
 
 
 @pytest.mark.parametrize(
-    "arguments",
+    "factory",
     [
-        {"n_splits": 1},
-        {"n_splits": 2, "min_train_sessions": 0},
-        {"n_splits": 2, "min_train_samples": 0},
-        {"n_splits": 2, "min_test_sessions": 0},
+        lambda: PurgedKFold(n_splits=1),
+        lambda: PurgedKFold(n_splits=2, min_train_sessions=0),
+        lambda: PurgedKFold(n_splits=2, min_train_samples=0),
+        lambda: PurgedKFold(n_splits=2, min_test_sessions=0),
     ],
 )
-def test_split_constraints_reject_unsupported_sizes(arguments: dict[str, int]) -> None:
+def test_split_constraints_reject_unsupported_sizes(
+    factory: Callable[[], PurgedKFold],
+) -> None:
     with pytest.raises(ValueError, match="integer of at least"):
-        PurgedKFold(**arguments)
+        factory()

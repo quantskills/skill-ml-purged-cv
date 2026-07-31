@@ -15,6 +15,6 @@ Blocked by: 02 — 打通 Fold-Local 训练与 OOS 评分; 03 — 扩展为完�
 
 ## Answer
 
-已完成属性测试、失败注入、回归反例、双入口示例、公共接口文档、需求追踪、本地验收记录及 Standards/Spec 双轴代码审查。审查发现均已修复并复核关闭。最终本地证据：41 passed；预检、Ruff、全仓格式、editable 安装、核心无 pandas 导入、安装后 core/adapter 导入及 `pip check` 全部通过。
+已完成属性测试、失败注入、回归反例、双入口示例、公共接口文档、需求追踪、本地验收记录及 Standards/Spec 双轴代码审查。审查发现均已修复并复核关闭。最终本地证据：41 passed；严格 mypy 覆盖 22 个文件且零错误；预检、Ruff、全仓格式、editable 安装、核心无 pandas 导入、安装后 core/adapter 导入及 `pip check` 全部通过；wheel 与 sdist 构建、Twine 元数据校验和 wheel 直接导入检查均通过。跨平台 CI 工作流已纳入仓库，远端运行状态须在发布分支推送后另行记录。
 
 ## Comments

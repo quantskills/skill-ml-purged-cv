@@ -6,13 +6,30 @@ build-backend = "setuptools.build_meta"
 name = "purged-kfold-validation"
 version = "0.1.0"
 description = "Leakage-safe Purged K-Fold model-selection evidence with interval Purge, session Embargo, Fold-Local evaluation, and PIT provenance."
+readme = "README.md"
 requires-python = ">=3.11"
 dependencies = ["numpy>=1.26"]
 
 [project.optional-dependencies]
-dev = ["hypothesis>=6.100", "pytest>=8", "ruff>=0.11"]
+dev = [
+  "build>=1.2",
+  "hypothesis>=6.100",
+  "mypy>=1.15",
+  "packaging>=24,<26",
+  "pandas-stubs>=2.2",
+  "pytest>=8",
+  "ruff>=0.11",
+  "twine>=6,<7",
+]
 pandas = ["pandas>=2.1"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+
+[tool.mypy]
+python_version = "3.11"
+files = ["src", "tests", "tasks"]
+strict = true
+show_error_codes = true
+pretty = true

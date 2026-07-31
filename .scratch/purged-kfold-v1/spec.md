@@ -1,6 +1,6 @@
 # Purged K-Fold V1 vertical slice
 
-Status: ready-for-agent
+Status: resolved
 Owner: project owner
 Evidence channel: model-selection
 
@@ -148,7 +148,7 @@ The result retains stable sample, split, dataset, model, metric, and configurati
 
 ## Further Notes
 
-- This spec is ready for agent implementation and carries the `ready-for-agent` local triage status.
+- This spec was accepted locally on 2026-07-31 after all seven Slice 1 tickets were resolved and the recorded verification gates passed.
 - The approved domain glossary defines Information Interval, Trading Session, Validation Dataset, Purge, Embargo, Fold Assignment, Leakage-Safe Evaluator, Fold-Local, OOS Ledger, Evidence Channel, and related terms. Implementation and tests must use that vocabulary rather than drifting to ambiguous synonyms.
 - Nine accepted architectural decisions govern evaluator ownership, explicit input, factories, evidence-bearing folds, strict failure, OOS facts, deterministic future CPCV paths, governed future holdout access, and feature availability evidence.
 - Slice 1 is complete only when all associated implementation tickets are resolved with recorded acceptance evidence and every approved requirement maps to implementation and observed tests.

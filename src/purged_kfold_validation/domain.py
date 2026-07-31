@@ -100,10 +100,12 @@ def canonical_identity(value: Hashable) -> dict[str, Any]:
         return {"type": "integer", "value": normalized}
     if isinstance(normalized, UUID):
         return {"type": "uuid", "value": str(normalized)}
-    return {
-        "type": "tuple",
-        "value": [canonical_identity(item) for item in normalized],
-    }
+    if isinstance(normalized, tuple):
+        return {
+            "type": "tuple",
+            "value": [canonical_identity(item) for item in normalized],
+        }
+    raise AssertionError("validated identity was not normalized")
 
 
 def _readonly_array(
@@ -211,22 +213,50 @@ class PITSnapshot:
         )
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, init=False)
 class ValidationDataset:
     """Canonical immutable input for diagnostic splitting and formal evaluation."""
 
-    sample_ids: Iterable[Hashable]
-    session_axis: Iterable[Any]
-    sessions: Iterable[Any]
-    information_intervals: Iterable[InformationInterval]
-    features: npt.ArrayLike
-    targets: npt.ArrayLike
-    asset_ids: Iterable[Hashable] | None = None
-    decision_times: Iterable[Any] | None = None
-    feature_availability: npt.ArrayLike | None = None
-    pit_snapshot: PITSnapshot | None = None
-    missing_value_policy: MissingValuePolicy | str = MissingValuePolicy.REJECT
+    sample_ids: tuple[Hashable, ...]
+    session_axis: tuple[np.datetime64, ...]
+    sessions: tuple[np.datetime64, ...]
+    information_intervals: tuple[InformationInterval, ...]
+    features: np.ndarray
+    targets: np.ndarray
+    asset_ids: tuple[Hashable, ...] | None
+    decision_times: np.ndarray | None
+    feature_availability: np.ndarray | None
+    pit_snapshot: PITSnapshot | None
+    missing_value_policy: MissingValuePolicy
     digest: str = field(init=False)
+
+    def __init__(
+        self,
+        *,
+        sample_ids: Iterable[Hashable],
+        session_axis: Iterable[Any],
+        sessions: Iterable[Any],
+        information_intervals: Iterable[InformationInterval],
+        features: npt.ArrayLike,
+        targets: npt.ArrayLike,
+        asset_ids: Iterable[Hashable] | None = None,
+        decision_times: Iterable[Any] | None = None,
+        feature_availability: npt.ArrayLike | None = None,
+        pit_snapshot: PITSnapshot | None = None,
+        missing_value_policy: MissingValuePolicy | str = MissingValuePolicy.REJECT,
+    ) -> None:
+        object.__setattr__(self, "sample_ids", sample_ids)
+        object.__setattr__(self, "session_axis", session_axis)
+        object.__setattr__(self, "sessions", sessions)
+        object.__setattr__(self, "information_intervals", information_intervals)
+        object.__setattr__(self, "features", features)
+        object.__setattr__(self, "targets", targets)
+        object.__setattr__(self, "asset_ids", asset_ids)
+        object.__setattr__(self, "decision_times", decision_times)
+        object.__setattr__(self, "feature_availability", feature_availability)
+        object.__setattr__(self, "pit_snapshot", pit_snapshot)
+        object.__setattr__(self, "missing_value_policy", missing_value_policy)
+        self.__post_init__()
 
     def __post_init__(self) -> None:
         from .validation import normalize_validation_dataset

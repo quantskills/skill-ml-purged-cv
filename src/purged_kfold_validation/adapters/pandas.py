@@ -17,7 +17,7 @@ class PandasField:
     """An explicit reference to one DataFrame column or index level."""
 
     column: Hashable | None = None
-    index_level: Hashable | int | None = None
+    index_level: str | int | None = None
 
     def __post_init__(self) -> None:
         selected = int(self.column is not None) + int(self.index_level is not None)
@@ -132,6 +132,7 @@ def validation_dataset_from_pandas(
     timezone_signatures.append(timezone)
 
     availability_mapping = mapping.feature_availability
+    assert availability_mapping is not None
     if isinstance(availability_mapping, tuple):
         availability_columns: list[np.ndarray] = []
         for index, field in enumerate(availability_mapping):
@@ -186,12 +187,14 @@ def _extract(frame: pd.DataFrame, field: PandasField, name: str) -> Any:
             raise AdapterValidationError(f"mapped {name} column is duplicated")
         return values
     try:
-        return frame.index.get_level_values(field.index_level)
+        index_level = field.index_level
+        assert index_level is not None
+        return frame.index.get_level_values(index_level)
     except (KeyError, IndexError, ValueError) as exc:
         raise AdapterValidationError(f"mapped {name} index level is missing") from exc
 
 
-def _datetime_values(values: Iterable[Any], name: str) -> tuple[np.ndarray, str | None]:
+def _datetime_values(values: Any, name: str) -> tuple[np.ndarray, str | None]:
     try:
         index = pd.DatetimeIndex(values)
     except (TypeError, ValueError) as exc:

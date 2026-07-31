@@ -74,6 +74,8 @@ class LeakageSafeEvaluator:
         dataset.require_formal_scoring()
         plan = self.splitter.plan(dataset)
         assignments = plan.require_assignments()
+        snapshot = dataset.pit_snapshot
+        assert snapshot is not None
 
         run_id = canonical_digest(
             {
@@ -169,7 +171,7 @@ class LeakageSafeEvaluator:
                         dataset_digest=dataset.digest,
                         split_spec_digest=assignment.split_spec_digest,
                         model_digest=self.model_spec.digest,
-                        pit_snapshot_digest=dataset.pit_snapshot.provenance_digest,
+                        pit_snapshot_digest=snapshot.provenance_digest,
                     )
                 )
 

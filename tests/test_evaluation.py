@@ -28,7 +28,7 @@ class RecordingCenterer:
 
     def transform(self, features: np.ndarray) -> np.ndarray:
         assert self.center is not None
-        return features - self.center
+        return np.asarray(features - self.center)
 
 
 class RecordingMeanEstimator:
