@@ -25,6 +25,10 @@ src/purged_kfold_validation/
 
 `domain.py`, `validation.py`, and `leakage.py` form the trusted core. Splitters consume normalized validated contracts, the evaluator consumes Fold Assignments, and adapters translate external ecosystems without owning leakage semantics. Raw OOS observations flow outward to metrics and optional writers; derived scores never become the source of truth.
 
+The implemented Slice 1 follows these boundaries: immutable values and digests remain
+in `domain.py`, cross-field and PIT eligibility checks live in `validation.py`, and exact
+Purge/Embargo decisions live in `leakage.py`.
+
 ## Delivery slices
 
 1. Purged K-Fold vertical slice.

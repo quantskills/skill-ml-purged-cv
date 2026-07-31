@@ -1,4 +1,5 @@
 """Generated cross-platform language verification."""
+
 from __future__ import annotations
 
 import shutil
@@ -18,7 +19,15 @@ def required(command: str) -> str:
 
 def run(argv: list[str], failures: list[str]) -> None:
     try:
-        result = subprocess.run(argv, cwd=ROOT, shell=False, capture_output=True, text=True, timeout=120, check=False)
+        result = subprocess.run(
+            argv,
+            cwd=ROOT,
+            shell=False,
+            capture_output=True,
+            text=True,
+            timeout=120,
+            check=False,
+        )
     except (OSError, subprocess.TimeoutExpired) as exc:
         failures.append(f"{argv[0]} failed to start: {exc}")
         return
@@ -29,14 +38,17 @@ def run(argv: list[str], failures: list[str]) -> None:
 
 def language_check(failures: list[str]) -> None:
     import compileall
+
     if not compileall.compile_dir(ROOT / "src", quiet=1):
         failures.append("Python source compilation failed")
     sys.path.insert(0, str(ROOT / "src"))
     try:
-        __import__('purged_kfold_validation')
+        __import__("purged_kfold_validation")
     except Exception as exc:
         failures.append(f"Python package import failed: {exc}")
     run([sys.executable, "-m", "pytest", "-q"], failures)
+    run([sys.executable, "-m", "ruff", "check", "."], failures)
+    run([sys.executable, "-m", "ruff", "format", "--check", "."], failures)
 
 
 def main() -> int:

@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from enum import Enum
 from hashlib import sha256
 import json
 from types import MappingProxyType
 from typing import Any, Callable, Hashable, Iterable, Mapping
+from uuid import UUID
 
 import numpy as np
 import numpy.typing as npt
@@ -14,12 +16,23 @@ import numpy.typing as npt
 from .errors import (
     DatasetValidationError,
     InvalidFoldError,
-    PointInTimeValidationError,
     TemporalValidationError,
 )
 
 
 SCHEMA_VERSION = "1"
+
+
+class EvidenceChannel(str, Enum):
+    """Purpose boundary carried by validation evidence."""
+
+    MODEL_SELECTION = "model-selection"
+
+
+class MissingValuePolicy(str, Enum):
+    """Declared handling of missing/non-finite model inputs."""
+
+    REJECT = "reject"
 
 
 def canonical_digest(value: Any) -> str:
@@ -33,6 +46,16 @@ def canonical_digest(value: Any) -> str:
         separators=(",", ":"),
     ).encode("utf-8")
     return sha256(payload).hexdigest()
+
+
+def _deeply_frozen_json(value: Any) -> Any:
+    if isinstance(value, dict):
+        return MappingProxyType(
+            {str(key): _deeply_frozen_json(item) for key, item in value.items()}
+        )
+    if isinstance(value, list):
+        return tuple(_deeply_frozen_json(item) for item in value)
+    return value
 
 
 def _time(value: Any, *, field_name: str) -> np.datetime64:
@@ -50,21 +73,37 @@ def _time_text(value: np.datetime64) -> str:
 
 
 def _identity(value: Hashable, *, field_name: str) -> Hashable:
-    if value is None:
-        raise DatasetValidationError(f"{field_name} contains a null identity")
-    try:
-        hash(value)
-    except TypeError as exc:
-        raise DatasetValidationError(
-            f"{field_name} contains an unhashable identity"
-        ) from exc
-    if isinstance(value, str) and not value:
-        raise DatasetValidationError(f"{field_name} contains an empty identity")
-    return value
+    if isinstance(value, np.integer) and not isinstance(value, np.bool_):
+        value = int(value)
+    if isinstance(value, str):
+        if not value:
+            raise DatasetValidationError(f"{field_name} contains an empty identity")
+        return value
+    if isinstance(value, int) and not isinstance(value, bool):
+        return value
+    if isinstance(value, UUID):
+        return value
+    if isinstance(value, tuple):
+        return tuple(_identity(item, field_name=field_name) for item in value)
+    raise DatasetValidationError(
+        f"{field_name} contains an unsupported stable identity type"
+    )
 
 
-def _identity_json(value: Hashable) -> dict[str, str]:
-    return {"type": type(value).__qualname__, "value": str(value)}
+def canonical_identity(value: Hashable) -> dict[str, Any]:
+    """Encode a validated stable identity without process-local representations."""
+
+    normalized = _identity(value, field_name="identity")
+    if isinstance(normalized, str):
+        return {"type": "string", "value": normalized}
+    if isinstance(normalized, int):
+        return {"type": "integer", "value": normalized}
+    if isinstance(normalized, UUID):
+        return {"type": "uuid", "value": str(normalized)}
+    return {
+        "type": "tuple",
+        "value": [canonical_identity(item) for item in normalized],
+    }
 
 
 def _readonly_array(
@@ -74,7 +113,10 @@ def _readonly_array(
     ndim: int | None = None,
     dtype: npt.DTypeLike | None = None,
 ) -> np.ndarray:
-    array = np.array(value, dtype=dtype, copy=True)
+    try:
+        array = np.array(value, dtype=dtype, copy=True)
+    except (TypeError, ValueError) as exc:
+        raise DatasetValidationError(f"{field_name} contains invalid values") from exc
     if ndim is not None and array.ndim != ndim:
         raise DatasetValidationError(f"{field_name} must have {ndim} dimensions")
     array.setflags(write=False)
@@ -183,191 +225,29 @@ class ValidationDataset:
     decision_times: Iterable[Any] | None = None
     feature_availability: npt.ArrayLike | None = None
     pit_snapshot: PITSnapshot | None = None
+    missing_value_policy: MissingValuePolicy | str = MissingValuePolicy.REJECT
     digest: str = field(init=False)
 
     def __post_init__(self) -> None:
-        sample_ids = tuple(
-            _identity(value, field_name="sample_ids") for value in self.sample_ids
-        )
-        if len(set(sample_ids)) != len(sample_ids):
-            raise DatasetValidationError("sample_ids contains duplicate identities")
-        if not sample_ids:
-            raise DatasetValidationError(
-                "ValidationDataset must contain at least one sample"
-            )
+        from .validation import normalize_validation_dataset
 
-        session_axis = tuple(
-            _time(value, field_name="session_axis") for value in self.session_axis
-        )
-        if not session_axis:
-            raise TemporalValidationError("session_axis must not be empty")
-        if any(left >= right for left, right in zip(session_axis, session_axis[1:])):
-            raise TemporalValidationError(
-                "session_axis must be unique and strictly increasing"
-            )
-
-        sessions = tuple(_time(value, field_name="sessions") for value in self.sessions)
-        intervals = tuple(self.information_intervals)
-        if not all(isinstance(interval, InformationInterval) for interval in intervals):
-            raise DatasetValidationError(
-                "information_intervals must contain InformationInterval values"
-            )
-        features = _readonly_array(self.features, field_name="features", ndim=2)
-        targets = _readonly_array(self.targets, field_name="targets", ndim=1)
-
-        lengths = {
-            "sample_ids": len(sample_ids),
-            "sessions": len(sessions),
-            "information_intervals": len(intervals),
-            "features": features.shape[0],
-            "targets": targets.shape[0],
-        }
-        if len(set(lengths.values())) != 1:
-            raise DatasetValidationError(
-                "row-aligned fields have inconsistent lengths: "
-                + ", ".join(f"{name}={length}" for name, length in lengths.items())
-            )
-
-        axis_positions = {session: index for index, session in enumerate(session_axis)}
-        if any(session not in axis_positions for session in sessions):
-            raise TemporalValidationError(
-                "sessions contains a value outside session_axis"
-            )
-        session_positions = tuple(axis_positions[session] for session in sessions)
-        if any(
-            left > right
-            for left, right in zip(session_positions, session_positions[1:])
-        ):
-            raise TemporalValidationError("samples must be ordered by session_axis")
-
-        asset_ids: tuple[Hashable, ...] | None = None
-        if self.asset_ids is not None:
-            asset_ids = tuple(
-                _identity(value, field_name="asset_ids") for value in self.asset_ids
-            )
-            if len(asset_ids) != len(sample_ids):
-                raise DatasetValidationError(
-                    "row-aligned fields have inconsistent lengths: asset_ids"
-                )
-
-        decision_times: np.ndarray | None = None
-        if self.decision_times is not None:
-            decision_times = np.array(
-                self.decision_times, dtype="datetime64[ns]", copy=True
-            )
-            if decision_times.ndim != 1 or decision_times.shape[0] != len(sample_ids):
-                raise DatasetValidationError(
-                    "decision_times must be one-dimensional and row-aligned"
-                )
-            decision_times.setflags(write=False)
-
-        feature_availability: np.ndarray | None = None
-        if self.feature_availability is not None:
-            feature_availability = np.array(
-                self.feature_availability, dtype="datetime64[ns]", copy=True
-            )
-            valid_shape = (
-                feature_availability.ndim == 1
-                and feature_availability.shape[0] == len(sample_ids)
-            ) or feature_availability.shape == features.shape
-            if not valid_shape:
-                raise DatasetValidationError(
-                    "feature_availability must be row-aligned or match features"
-                )
-            feature_availability.setflags(write=False)
-
-        if self.pit_snapshot is not None and not isinstance(
-            self.pit_snapshot, PITSnapshot
-        ):
-            raise DatasetValidationError("pit_snapshot must be a PITSnapshot")
-
-        normalized = {
-            "schema_version": SCHEMA_VERSION,
-            "sample_ids": [_identity_json(value) for value in sample_ids],
-            "session_axis": [_time_text(value) for value in session_axis],
-            "sessions": [_time_text(value) for value in sessions],
-            "information_intervals": [interval.canonical() for interval in intervals],
-            "features": _array_json(features),
-            "targets": _array_json(targets),
-            "asset_ids": (
-                None
-                if asset_ids is None
-                else [_identity_json(value) for value in asset_ids]
-            ),
-            "decision_times": _time_array_json(decision_times),
-            "feature_availability": _time_array_json(feature_availability),
-            "pit_snapshot": (
-                None
-                if self.pit_snapshot is None
-                else {
-                    "snapshot_id": self.pit_snapshot.snapshot_id,
-                    "source_digest": self.pit_snapshot.source_digest,
-                    "revision_policy": self.pit_snapshot.revision_policy,
-                }
-            ),
-        }
-
-        object.__setattr__(self, "sample_ids", sample_ids)
-        object.__setattr__(self, "session_axis", session_axis)
-        object.__setattr__(self, "sessions", sessions)
-        object.__setattr__(self, "information_intervals", intervals)
-        object.__setattr__(self, "features", features)
-        object.__setattr__(self, "targets", targets)
-        object.__setattr__(self, "asset_ids", asset_ids)
-        object.__setattr__(self, "decision_times", decision_times)
-        object.__setattr__(self, "feature_availability", feature_availability)
-        object.__setattr__(self, "digest", canonical_digest(normalized))
+        for name, value in normalize_validation_dataset(self).items():
+            object.__setattr__(self, name, value)
 
     @property
     def formal_scoring_issues(self) -> tuple[str, ...]:
         """Return metadata-only reasons this dataset cannot produce a formal score."""
 
-        issues: list[str] = []
-        if self.decision_times is None:
-            issues.append("Decision Time evidence is missing")
-        elif bool(np.isnat(self.decision_times).any()):
-            issues.append("Decision Time evidence contains missing times")
+        from .validation import formal_scoring_issues
 
-        if self.feature_availability is None:
-            issues.append("Feature Availability evidence is missing")
-        elif bool(np.isnat(self.feature_availability).any()):
-            issues.append("Feature Availability evidence contains missing times")
-
-        if self.pit_snapshot is None:
-            issues.append("PIT Snapshot provenance is missing")
-        else:
-            if not self.pit_snapshot.snapshot_id:
-                issues.append("PIT Snapshot identity is missing")
-            if not self.pit_snapshot.source_digest:
-                issues.append("PIT Snapshot source digest is missing")
-            if self.pit_snapshot.revision_policy != "point-in-time":
-                issues.append("PIT Snapshot revision policy is not point-in-time")
-
-        if self.decision_times is not None and self.feature_availability is not None:
-            decisions = self.decision_times
-            availability = self.feature_availability
-            if availability.ndim == 2:
-                decisions = decisions[:, np.newaxis]
-            late_rows = (
-                np.nonzero(np.any(availability > decisions, axis=1))[0]
-                if availability.ndim == 2
-                else np.nonzero(availability > decisions)[0]
-            )
-            if len(late_rows):
-                issues.append(
-                    "Feature Availability is later than Decision Time at sample positions "
-                    + ",".join(str(int(position)) for position in late_rows)
-                )
-        return tuple(issues)
+        return formal_scoring_issues(self)
 
     def require_formal_scoring(self) -> None:
         """Fail closed when temporal feature evidence is not point-in-time safe."""
 
-        issues = self.formal_scoring_issues
-        if issues:
-            raise PointInTimeValidationError(
-                "formal scoring rejected dataset: " + "; ".join(issues)
-            )
+        from .validation import require_formal_scoring
+
+        require_formal_scoring(self)
 
 
 @dataclass(frozen=True, slots=True)
@@ -422,7 +302,7 @@ class FoldAssignment:
     dataset_digest: str
     split_spec_digest: str
     split_id: str
-    evidence_channel: str = "model-selection"
+    evidence_channel: EvidenceChannel = EvidenceChannel.MODEL_SELECTION
     schema_version: str = SCHEMA_VERSION
     exclusion_trace: tuple[ExclusionRecord, ...] | None = None
 
@@ -525,19 +405,29 @@ class ModelSpec:
             raise DatasetValidationError("model name and version must not be empty")
         parameters = dict(self.parameters)
         try:
+            normalized_parameters = json.loads(
+                json.dumps(
+                    parameters,
+                    ensure_ascii=False,
+                    allow_nan=False,
+                    sort_keys=True,
+                )
+            )
             digest = canonical_digest(
                 {
                     "kind": "model-spec",
                     "name": self.name,
                     "version": self.version,
-                    "parameters": parameters,
+                    "parameters": normalized_parameters,
                 }
             )
         except (TypeError, ValueError) as exc:
             raise DatasetValidationError(
                 "model parameters must be canonical JSON values"
             ) from exc
-        object.__setattr__(self, "parameters", MappingProxyType(parameters))
+        object.__setattr__(
+            self, "parameters", _deeply_frozen_json(normalized_parameters)
+        )
         object.__setattr__(self, "digest", digest)
 
 
@@ -583,7 +473,7 @@ class OOSObservation:
     split_spec_digest: str
     model_digest: str
     pit_snapshot_digest: str
-    evidence_channel: str = "model-selection"
+    evidence_channel: EvidenceChannel = EvidenceChannel.MODEL_SELECTION
 
 
 @dataclass(frozen=True, slots=True)
@@ -598,10 +488,10 @@ class OOSLedger:
         normalized = [
             {
                 "run_id": item.run_id,
-                "sample_id": _identity_json(item.sample_id),
+                "sample_id": canonical_identity(item.sample_id),
                 "session": _time_text(item.session),
                 "asset_id": (
-                    None if item.asset_id is None else _identity_json(item.asset_id)
+                    None if item.asset_id is None else canonical_identity(item.asset_id)
                 ),
                 "fold_index": item.fold_index,
                 "split_id": item.split_id,
@@ -611,7 +501,7 @@ class OOSLedger:
                 "split_spec_digest": item.split_spec_digest,
                 "model_digest": item.model_digest,
                 "pit_snapshot_digest": item.pit_snapshot_digest,
-                "evidence_channel": item.evidence_channel,
+                "evidence_channel": item.evidence_channel.value,
             }
             for item in observations
         ]
@@ -650,9 +540,17 @@ class DerivedMetric:
     overall: float
     per_fold: tuple[float, ...]
     observation_count: int
-    coverage: float
+    observation_coverage: float
+    fold_count: int
+    fold_coverage: float
     ledger_digest: str
     metric_digest: str
+
+    @property
+    def coverage(self) -> float:
+        """Backward-compatible alias for observation coverage."""
+
+        return self.observation_coverage
 
 
 @dataclass(frozen=True, slots=True)
@@ -663,4 +561,4 @@ class EvaluationResult:
     plan_digest: str
     ledger: OOSLedger
     metrics: tuple[DerivedMetric, ...]
-    evidence_channel: str = "model-selection"
+    evidence_channel: EvidenceChannel = EvidenceChannel.MODEL_SELECTION

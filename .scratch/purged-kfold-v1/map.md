@@ -1,6 +1,6 @@
 # Purged K-Fold V1 map
 
-Status: ready-for-agent
+Status: resolved
 
 ## Notes
 
@@ -14,6 +14,7 @@ Status: ready-for-agent
 - Ticket 04 is resolved; its interval, Session Axis Embargo, exclusion trace, and panel evidence are recorded in `issues/04-financial-time-and-panel-boundaries.md`.
 - Ticket 05 is resolved; its PIT eligibility, latest-revision rejection, redaction, and OOS provenance evidence are recorded in `issues/05-pit-safe-formal-scoring.md`.
 - Ticket 06 is resolved; its explicit mapping, equivalence, ambiguity rejection, and optional-dependency evidence are recorded in `issues/06-pandas-adapter.md`.
+- Ticket 07 is resolved; property, regression, documentation, packaging, and dual-axis review evidence are recorded in `issues/07-acceptance-evidence.md` and `docs/verification.md`.
 
 ## Decisions so far
 
@@ -21,6 +22,7 @@ Status: ready-for-agent
 - Slice 1 is a vertical Purged K-Fold evaluation path; CPCV, walk-forward, holdout governance, nested HPO, and persistent writers are later slices.
 - The published spec follows the project PRD template and is ready for implementation without further triage.
 - The implementation tickets are vertical, independently verifiable slices; the former horizontal layer tickets have been superseded.
+- All Slice 1 tickets are resolved. Later work remains planned and requires a separately claimed frontier ticket.
 
 ## Fog
 

@@ -9,6 +9,7 @@ import numpy as np
 
 from .domain import (
     DerivedMetric,
+    EvidenceChannel,
     EvaluationResult,
     FoldAssignment,
     MetricSpec,
@@ -81,14 +82,12 @@ class LeakageSafeEvaluator:
                 "plan_digest": plan.digest,
                 "model_digest": self.model_spec.digest,
                 "metric_digests": [metric.digest for metric in self.metrics],
-                "evidence_channel": "model-selection",
+                "evidence_channel": EvidenceChannel.MODEL_SELECTION.value,
             }
         )
         observations: list[OOSObservation] = []
         created_estimators: list[Estimator] = []
-        created_transformers: list[list[Transformer]] = [
-            [] for _ in self.transformer_factories
-        ]
+        created_transformers: list[Transformer] = []
 
         for assignment in assignments:
             train_features = np.array(
@@ -101,16 +100,13 @@ class LeakageSafeEvaluator:
                 dataset.targets[assignment.train_positions], copy=True
             )
 
-            for factory_index, factory in enumerate(self.transformer_factories):
+            for factory in self.transformer_factories:
                 transformer = self._create_transformer(factory)
-                if any(
-                    transformer is previous
-                    for previous in created_transformers[factory_index]
-                ):
+                if any(transformer is previous for previous in created_transformers):
                     raise FactoryLifecycleError(
-                        "transformer factory reused an object across folds"
+                        "transformer factories reused an object across stages or folds"
                     )
-                created_transformers[factory_index].append(transformer)
+                created_transformers.append(transformer)
                 try:
                     transformer.fit(train_features, train_targets)
                     train_features = np.asarray(transformer.transform(train_features))
@@ -150,6 +146,10 @@ class LeakageSafeEvaluator:
                     f"fold {assignment.fold_index} predictions must be one-dimensional "
                     f"with {len(assignment.test_positions)} observations"
                 )
+            self._require_finite_numeric(
+                predictions,
+                message=f"fold {assignment.fold_index} predictions must be finite numeric values",
+            )
 
             for position, prediction in zip(assignment.test_positions, predictions):
                 observations.append(
@@ -223,6 +223,17 @@ class LeakageSafeEvaluator:
             raise PredictionShapeError(
                 f"fold {fold_index} transformed features must have {expected} rows"
             )
+        LeakageSafeEvaluator._require_finite_numeric(
+            features,
+            message=f"fold {fold_index} transformed features must be finite numeric values",
+        )
+
+    @staticmethod
+    def _require_finite_numeric(values: np.ndarray, *, message: str) -> None:
+        if not np.issubdtype(values.dtype, np.number) or not bool(
+            np.isfinite(values).all()
+        ):
+            raise PredictionShapeError(message)
 
     @staticmethod
     def _derive_metric(
@@ -254,15 +265,28 @@ class LeakageSafeEvaluator:
                 )
                 for index in sorted(observations_by_fold)
             )
+            if not np.isfinite(overall) or not all(
+                np.isfinite(value) for value in per_fold
+            ):
+                raise MetricEvaluationError(
+                    f"metric {metric.name!r} must return finite values"
+                )
+        except MetricEvaluationError:
+            raise
         except Exception as exc:
             raise MetricEvaluationError(f"metric {metric.name!r} failed") from exc
+        fold_count = sum(bool(values) for values in observations_by_fold.values())
         return DerivedMetric(
             name=metric.name,
             version=metric.version,
             overall=overall,
             per_fold=per_fold,
             observation_count=len(ledger.observations),
-            coverage=(len(ledger.observations) / dataset_size if dataset_size else 0.0),
+            observation_coverage=(
+                len(ledger.observations) / dataset_size if dataset_size else 0.0
+            ),
+            fold_count=fold_count,
+            fold_coverage=(fold_count / len(assignments) if assignments else 0.0),
             ledger_digest=ledger.digest,
             metric_digest=metric.digest,
         )

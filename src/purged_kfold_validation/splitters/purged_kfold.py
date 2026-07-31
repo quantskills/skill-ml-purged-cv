@@ -3,22 +3,20 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Hashable
 
 import numpy as np
 
 from ..domain import (
-    ExclusionSummary,
-    ExclusionRecord,
     FoldAssignment,
-    InformationInterval,
     InvalidFold,
     SplitPlan,
     TestBlock,
     ValidationDataset,
+    canonical_identity,
     canonical_digest,
 )
 from ..errors import SplitPlanError
+from ..leakage import apply_leakage_exclusions
 
 
 @dataclass(frozen=True, slots=True)
@@ -123,45 +121,25 @@ class PurgedKFold:
             for index, session in enumerate(dataset.sessions)
             if session not in test_session_set
         )
-        protected = tuple(
-            dataset.information_intervals[index] for index in test_positions
-        )
-        purged_positions = {
-            index
-            for index in candidate_positions
-            if _overlaps_any(dataset.information_intervals[index], protected)
-        }
         test_block = TestBlock(
             start_session=test_sessions[0],
             end_session=test_sessions[-1],
             session_count=len(test_sessions),
         )
-        embargoed_sessions = self._embargoed_sessions(
-            dataset, test_positions, (test_block,)
+        exclusions = apply_leakage_exclusions(
+            dataset,
+            candidate_positions=candidate_positions,
+            test_positions=test_positions,
+            test_blocks=(test_block,),
+            embargo_sessions=self.embargo_sessions,
+            include_trace=self.include_exclusion_trace,
         )
-        embargoed_positions = {
-            index
-            for index in candidate_positions
-            if index not in purged_positions
-            and dataset.sessions[index] in embargoed_sessions
-        }
-        train_positions = tuple(
-            index
-            for index in candidate_positions
-            if index not in purged_positions and index not in embargoed_positions
-        )
+        train_positions = exclusions.train_positions
         train_session_count = len(
             {dataset.sessions[index] for index in train_positions}
         )
-        summary = ExclusionSummary(
-            candidates=len(candidate_positions),
-            purged=len(purged_positions),
-            embargoed=len(embargoed_positions),
-            retained=len(train_positions),
-        )
-        trace = self._exclusion_trace(
-            dataset, candidate_positions, purged_positions, embargoed_positions
-        )
+        summary = exclusions.summary
+        trace = exclusions.trace
         test_sample_ids = tuple(dataset.sample_ids[index] for index in test_positions)
         reasons: list[str] = []
         if len(test_sessions) < self.min_test_sessions:
@@ -195,11 +173,11 @@ class PurgedKFold:
                 "split_spec_digest": self.digest,
                 "fold_index": fold_index,
                 "train_sample_ids": [
-                    _identity_text(dataset.sample_ids[index])
+                    canonical_identity(dataset.sample_ids[index])
                     for index in train_positions
                 ],
                 "test_sample_ids": [
-                    _identity_text(dataset.sample_ids[index])
+                    canonical_identity(dataset.sample_ids[index])
                     for index in test_positions
                 ],
             }
@@ -219,68 +197,3 @@ class PurgedKFold:
             split_id=split_id,
             exclusion_trace=trace,
         )
-
-    def _embargoed_sessions(
-        self,
-        dataset: ValidationDataset,
-        test_positions: tuple[int, ...],
-        test_blocks: tuple[TestBlock, ...],
-    ) -> set[np.datetime64]:
-        if self.embargo_sessions == 0:
-            return set()
-        embargoed: set[np.datetime64] = set()
-        axis = np.asarray(dataset.session_axis, dtype="datetime64[ns]")
-        for block in test_blocks:
-            block_positions = tuple(
-                position
-                for position in test_positions
-                if block.start_session
-                <= dataset.sessions[position]
-                <= block.end_session
-            )
-            if not block_positions:
-                continue
-            latest_information_end = max(
-                dataset.information_intervals[position].end
-                for position in block_positions
-            )
-            start = int(np.searchsorted(axis, latest_information_end, side="right"))
-            stop = min(start + self.embargo_sessions, len(axis))
-            embargoed.update(np.datetime64(value, "ns") for value in axis[start:stop])
-        return embargoed
-
-    def _exclusion_trace(
-        self,
-        dataset: ValidationDataset,
-        candidate_positions: tuple[int, ...],
-        purged_positions: set[int],
-        embargoed_positions: set[int],
-    ) -> tuple[ExclusionRecord, ...] | None:
-        if not self.include_exclusion_trace:
-            return None
-        records: list[ExclusionRecord] = []
-        for position in candidate_positions:
-            reason: str | None = None
-            if position in purged_positions:
-                reason = "purge-overlap"
-            elif position in embargoed_positions:
-                reason = "embargo"
-            if reason is not None:
-                records.append(
-                    ExclusionRecord(
-                        sample_id=dataset.sample_ids[position],
-                        position=position,
-                        reason=reason,
-                    )
-                )
-        return tuple(records)
-
-
-def _overlaps_any(
-    candidate: InformationInterval, protected: tuple[InformationInterval, ...]
-) -> bool:
-    return any(candidate.overlaps(interval) for interval in protected)
-
-
-def _identity_text(value: Hashable) -> dict[str, str]:
-    return {"type": type(value).__qualname__, "value": str(value)}

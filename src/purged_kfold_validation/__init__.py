@@ -2,6 +2,7 @@
 
 from .domain import (
     DerivedMetric,
+    EvidenceChannel,
     EvaluationResult,
     ExclusionRecord,
     ExclusionSummary,
@@ -9,6 +10,7 @@ from .domain import (
     InformationInterval,
     InvalidFold,
     MetricSpec,
+    MissingValuePolicy,
     ModelSpec,
     OOSLedger,
     OOSObservation,
@@ -39,6 +41,7 @@ __all__ = [
     "AdapterValidationError",
     "DatasetValidationError",
     "DerivedMetric",
+    "EvidenceChannel",
     "EvaluationError",
     "EvaluationResult",
     "ExclusionRecord",
@@ -51,6 +54,7 @@ __all__ = [
     "LeakageSafeEvaluator",
     "MetricSpec",
     "MetricEvaluationError",
+    "MissingValuePolicy",
     "ModelSpec",
     "OOSLedger",
     "OOSObservation",

@@ -2,13 +2,15 @@
 
 This repository is the maintained project for the purpose below.
 
-## Project purpose
+## Project roadmap
 
-Windows、Linux、macOS 跨平台可复用 Python 软件库，用于金融机器学习训练验证，提供基于显式事件区间和交易日历 session 的 Purged K-Fold、Embargo、CPCV 路径拼接、严格 walk-forward 与 untouched holdout；多资产 panel 按同日分组，预处理与嵌套 HPO 必须 fold-local，缺失泄漏元数据时 fail closed，并以属性测试和回归测试验证防未来函数与信息泄漏。
+The long-term roadmap is a cross-platform financial validation library spanning Purged
+K-Fold, CPCV, Causal Walk-Forward, and governed holdout evidence. Capabilities are only
+claimed when their delivery slice has implementation and observed acceptance evidence.
 
 ## Implemented scope
 
-Version 0.1 implements the first model-selection slice only: explicit point-in-time
+Version 0.1 currently implements the first model-selection slice only: explicit point-in-time
 `ValidationDataset` input, diagnostic Purged K-Fold `SplitPlan`, session-based Embargo,
 Fold-Local evaluation, raw `OOSLedger`, versioned metrics, and an optional explicit
 pandas adapter.

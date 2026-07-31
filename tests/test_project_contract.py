@@ -6,3 +6,5 @@ def test_core_project_contract_exists() -> None:
     assert (root / "AGENTS.md").is_file()
     assert (root / "PROGRAM.md").is_file()
     assert (root / "project.yaml").is_file()
+    assert (root / "config" / ".env.example").is_file()
+    assert not (root / ".env.example").exists()

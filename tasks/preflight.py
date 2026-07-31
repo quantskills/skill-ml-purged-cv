@@ -1,14 +1,22 @@
 """Generated cross-platform scaffold preflight."""
+
 from __future__ import annotations
 
 import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-REQUIRED_FILES = ("AGENTS.md", "PROGRAM.md", "CONTEXT.md", "README.md", "project.yaml", "docs/WORK_ITEMS.md")
+REQUIRED_FILES = (
+    "AGENTS.md",
+    "PROGRAM.md",
+    "CONTEXT.md",
+    "README.md",
+    "project.yaml",
+    "docs/WORK_ITEMS.md",
+)
 REQUIRED_DIRS = ("src", "scripts", "tasks", "tests", "config", "docs")
 MANIFESTS = ("pyproject.toml", "package.json", "go.mod")
-EXPECTED_MANIFEST = 'pyproject.toml'
+EXPECTED_MANIFEST = "pyproject.toml"
 
 
 def main() -> int:
@@ -23,8 +31,14 @@ def main() -> int:
     present = [name for name in MANIFESTS if (ROOT / name).is_file()]
     expected = [] if EXPECTED_MANIFEST is None else [EXPECTED_MANIFEST]
     if present != expected:
-        errors.append(f"language manifest contract failed: expected={expected}, actual={present}")
-    report = {"status": "success" if not errors else "error", "root": str(ROOT), "errors": errors}
+        errors.append(
+            f"language manifest contract failed: expected={expected}, actual={present}"
+        )
+    report = {
+        "status": "success" if not errors else "error",
+        "root": str(ROOT),
+        "errors": errors,
+    }
     print(json.dumps(report, ensure_ascii=True))
     return 0 if not errors else 1
 

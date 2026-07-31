@@ -1,6 +1,8 @@
 # Interface contract
 
-Windows、Linux、macOS 跨平台可复用 Python 软件库，用于金融机器学习训练验证，提供基于显式事件区间和交易日历 session 的 Purged K-Fold、Embargo、CPCV 路径拼接、严格 walk-forward 与 untouched holdout；多资产 panel 按同日分组，预处理与嵌套 HPO 必须 fold-local，缺失泄漏元数据时 fail closed，并以属性测试和回归测试验证防未来函数与信息泄漏。
+This document describes the implemented Slice 1 Purged K-Fold model-selection contract.
+The broader CPCV, causal validation, and holdout program remains a roadmap, not a
+current capability.
 
 ## Slice 1 public contract
 
@@ -37,11 +39,14 @@ fold, partial ledger, warning-only score, or NaN substitute is valid evidence.
 - `InformationInterval` uses inclusive boundaries.
 - `ValidationDataset` owns stable sample identity, Session Axis membership, optional
   asset identity, features, targets, temporal feature evidence, and source provenance.
+- The only Slice 1 `MissingValuePolicy` is fail-closed `reject`; features and targets
+  must be finite numeric arrays.
 - Public arrays are read-only copies and domain results are immutable.
 - Dataset, split specification, fold, plan, model, metric, run, ledger, and PIT source
   state have deterministic digests or identities where applicable.
 - `OOSObservation` retains sample, session, optional asset, fold, split, model, dataset,
   split-specification, PIT source, run, and Evidence Channel identity.
+- Each `DerivedMetric` reports observation count/coverage and fold count/coverage.
 - Public failures derive from `ValidationError`; dataset, temporal/PIT, split, factory,
   execution, shape, metric, and adapter failures remain distinguishable.
 
