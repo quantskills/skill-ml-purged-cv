@@ -1,0 +1,3 @@
+# Require feature availability evidence
+
+A leakage-safe Validation Dataset must include Decision Time, row-level Feature Availability, and point-in-time source provenance, with optional per-feature availability for stricter validation. Precomputed feature matrices without this evidence, latest-revision data, and globally learned feature transformations cannot produce leakage-safe scores because purge and embargo only govern sample/label interactions; the library verifies declared timing and snapshot digests while making no claim that it can prove an external source did not falsify its metadata.

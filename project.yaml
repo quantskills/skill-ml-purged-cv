@@ -1,0 +1,93 @@
+schema_version: 1
+scaffold_contract_version: 2
+generated_at: '2026-07-30T14:50:38.293397+00:00'
+name: purged-kfold-validation
+description: Windows、Linux、macOS 跨平台可复用 Python 软件库，用于金融机器学习训练验证，提供基于显式事件区间和交易日历 session
+  的 Purged K-Fold、Embargo、CPCV 路径拼接、严格 walk-forward 与 untouched holdout；多资产 panel
+  按同日分组，预处理与嵌套 HPO 必须 fold-local，缺失泄漏元数据时 fail closed，并以属性测试和回归测试验证防未来函数与信息泄漏。
+canonical_root: D:\codexapp\project\purged-kfold-validation
+classification:
+  primary_type: library-cli
+  secondary_types: &id001
+  - data-quant
+  domain: finance
+  lifecycle: active
+  runtime: library
+  write_target: repository-only
+  data_sensitivity: sensitive
+  risk: R1
+  platforms: &id002
+  - windows
+  - linux
+  - macos
+  language: python
+  tags:
+  - library-cli
+  - data-quant
+  - finance
+  - active
+  - library
+  - windows
+  - linux
+  - macos
+  evidence:
+  - field: primary_type
+    value: library-cli
+    source: matched description
+    matched_terms:
+    - 库
+  - field: secondary_types
+    value: *id001
+    source: matched description
+  - field: domain
+    value: finance
+    source: matched description
+    matched_terms:
+    - 交易
+    - 金融
+  - field: lifecycle
+    value: active
+    source: type default
+  - field: runtime
+    value: library
+    source: matched description
+    matched_terms:
+    - 软件库
+  - field: write_target
+    value: repository-only
+    source: type default
+  - field: data_sensitivity
+    value: sensitive
+    source: matched description
+    matched_terms:
+    - 金融
+    - 交易
+  - field: risk
+    value: R1
+    source: type default
+  - field: language
+    value: python
+    source: matched description
+    matched_terms:
+    - python
+  - field: platforms
+    value: *id002
+    source: matched description
+language: python
+read_order:
+- AGENTS.md
+- PROGRAM.md
+- CONTEXT.md
+- README.md
+- tasks/preflight.py
+- docs/WORK_ITEMS.md
+write_policy:
+  default_mode: plan
+  execute_required: true
+  allowed_roots:
+  - this repository
+  - temporary test directories
+  external_targets: owner approval and explicit configuration required
+verification_commands:
+- python tasks/preflight.py
+- python tasks/test.py
