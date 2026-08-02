@@ -5,7 +5,9 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum
 from hashlib import sha256
+from itertools import combinations as choose_combinations
 import json
+from math import comb
 from types import MappingProxyType
 from typing import Any, Callable, Hashable, Iterable, Mapping
 from uuid import UUID
@@ -27,6 +29,9 @@ class EvidenceChannel(str, Enum):
     """Purpose boundary carried by validation evidence."""
 
     MODEL_SELECTION = "model-selection"
+    CPCV_ROBUSTNESS = "cpcv-robustness"
+    CAUSAL_WALK_FORWARD = "causal-walk-forward"
+    HOLDOUT_CONFIRMATION = "holdout-confirmation"
 
 
 class MissingValuePolicy(str, Enum):
@@ -227,6 +232,7 @@ class ValidationDataset:
     decision_times: np.ndarray | None
     feature_availability: np.ndarray | None
     pit_snapshot: PITSnapshot | None
+    feature_manifest_digest: str | None
     missing_value_policy: MissingValuePolicy
     digest: str = field(init=False)
 
@@ -243,6 +249,7 @@ class ValidationDataset:
         decision_times: Iterable[Any] | None = None,
         feature_availability: npt.ArrayLike | None = None,
         pit_snapshot: PITSnapshot | None = None,
+        feature_manifest_digest: str | None = None,
         missing_value_policy: MissingValuePolicy | str = MissingValuePolicy.REJECT,
     ) -> None:
         object.__setattr__(self, "sample_ids", sample_ids)
@@ -255,6 +262,7 @@ class ValidationDataset:
         object.__setattr__(self, "decision_times", decision_times)
         object.__setattr__(self, "feature_availability", feature_availability)
         object.__setattr__(self, "pit_snapshot", pit_snapshot)
+        object.__setattr__(self, "feature_manifest_digest", feature_manifest_digest)
         object.__setattr__(self, "missing_value_policy", missing_value_policy)
         self.__post_init__()
 
@@ -288,6 +296,8 @@ class ExclusionSummary:
     purged: int
     embargoed: int
     retained: int
+    pre_test_gapped: int = 0
+    noncausal: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -307,6 +317,154 @@ class TestBlock:
         object.__setattr__(
             self, "end_session", _time(self.end_session, field_name="test block end")
         )
+
+
+@dataclass(frozen=True, slots=True)
+class CPCVPathOccurrence:
+    """One combination/test-group occurrence assigned to a CPCV Path."""
+
+    combination_index: int
+    group_index: int
+
+
+@dataclass(frozen=True, slots=True)
+class CPCVPath:
+    """One complete chronological CPCV Path."""
+
+    path_index: int
+    occurrences: tuple[CPCVPathOccurrence, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class CPCVPathDecomposition:
+    """Immutable proof that all CPCV occurrences form complete paths."""
+
+    n_groups: int
+    n_test_groups: int
+    groups: tuple[TestBlock, ...]
+    combinations: tuple[tuple[int, ...], ...]
+    paths: tuple[CPCVPath, ...]
+    digest: str = field(init=False)
+
+    def __post_init__(self) -> None:
+        groups = tuple(self.groups)
+        combinations = tuple(tuple(value) for value in self.combinations)
+        paths = tuple(self.paths)
+        if self.n_groups < 3 or not 2 <= self.n_test_groups < self.n_groups:
+            raise DatasetValidationError("invalid CPCV N,k configuration")
+        if len(groups) != self.n_groups:
+            raise DatasetValidationError("CPCV group count does not match n_groups")
+        if any(group.session_count < 1 for group in groups) or any(
+            previous.end_session >= current.start_session
+            for previous, current in zip(groups, groups[1:])
+        ):
+            raise DatasetValidationError(
+                "CPCV groups must be non-empty and strictly chronological"
+            )
+        expected_combinations = tuple(
+            choose_combinations(range(self.n_groups), self.n_test_groups)
+        )
+        if combinations != expected_combinations:
+            raise DatasetValidationError(
+                "CPCV combinations must be complete lexicographic N,k choices"
+            )
+        expected_path_count = comb(self.n_groups - 1, self.n_test_groups - 1)
+        if len(paths) != expected_path_count:
+            raise DatasetValidationError("CPCV path count must equal C(N-1,k-1)")
+        if tuple(path.path_index for path in paths) != tuple(range(len(paths))):
+            raise DatasetValidationError("CPCV path indices must be contiguous")
+        expected_occurrences = {
+            (combination_index, group_index)
+            for combination_index, combination in enumerate(combinations)
+            for group_index in combination
+        }
+        observed_occurrences: set[tuple[int, int]] = set()
+        paths_by_combination: dict[int, set[int]] = {}
+        for path in paths:
+            if tuple(item.group_index for item in path.occurrences) != tuple(
+                range(self.n_groups)
+            ):
+                raise DatasetValidationError(
+                    "every CPCV path must contain every group exactly once"
+                )
+            for item in path.occurrences:
+                identity = (item.combination_index, item.group_index)
+                if identity in observed_occurrences:
+                    raise DatasetValidationError(
+                        "a CPCV combination/group occurrence was assigned more than once"
+                    )
+                observed_occurrences.add(identity)
+                paths_by_combination.setdefault(item.combination_index, set()).add(
+                    path.path_index
+                )
+        if observed_occurrences != expected_occurrences:
+            raise DatasetValidationError(
+                "CPCV Path Decomposition does not cover every occurrence"
+            )
+        if any(
+            len(path_indices) != len(combinations[combination_index])
+            for combination_index, path_indices in paths_by_combination.items()
+        ):
+            raise DatasetValidationError(
+                "test groups from one CPCV combination must occupy distinct paths"
+            )
+        object.__setattr__(self, "groups", groups)
+        object.__setattr__(self, "combinations", combinations)
+        object.__setattr__(self, "paths", paths)
+        object.__setattr__(
+            self,
+            "digest",
+            canonical_digest(
+                {
+                    "kind": "cpcv-path-decomposition",
+                    "n_groups": self.n_groups,
+                    "n_test_groups": self.n_test_groups,
+                    "groups": [
+                        {
+                            "start": _time_text(group.start_session),
+                            "end": _time_text(group.end_session),
+                            "session_count": group.session_count,
+                        }
+                        for group in groups
+                    ],
+                    "combinations": [list(value) for value in combinations],
+                    "paths": [
+                        {
+                            "path_index": path.path_index,
+                            "occurrences": [
+                                {
+                                    "combination_index": item.combination_index,
+                                    "group_index": item.group_index,
+                                }
+                                for item in path.occurrences
+                            ],
+                        }
+                        for path in paths
+                    ],
+                }
+            ),
+        )
+
+    @property
+    def path_count(self) -> int:
+        return len(self.paths)
+
+    def path_index_for(self, combination_index: int, group_index: int) -> int:
+        """Return the unique path owning one combination/group occurrence."""
+
+        for path in self.paths:
+            if CPCVPathOccurrence(combination_index, group_index) in path.occurrences:
+                return path.path_index
+        raise DatasetValidationError("unknown CPCV combination/group occurrence")
+
+    def group_index_for(self, session: np.datetime64) -> int:
+        """Return the chronological CPCV group containing one Trading Session."""
+
+        normalized = _time(session, field_name="CPCV observation session")
+        for group_index, group in enumerate(self.groups):
+            if group.start_session <= normalized <= group.end_session:
+                return group_index
+        raise DatasetValidationError("CPCV observation session is outside its groups")
 
 
 @dataclass(frozen=True, slots=True)
@@ -333,6 +491,8 @@ class FoldAssignment:
     split_spec_digest: str
     split_id: str
     evidence_channel: EvidenceChannel = EvidenceChannel.MODEL_SELECTION
+    combination_index: int | None = None
+    test_group_indices: tuple[int, ...] = ()
     schema_version: str = SCHEMA_VERSION
     exclusion_trace: tuple[ExclusionRecord, ...] | None = None
 
@@ -373,6 +533,8 @@ class FoldAssignment:
             and self.split_spec_digest == other.split_spec_digest
             and self.split_id == other.split_id
             and self.evidence_channel == other.evidence_channel
+            and self.combination_index == other.combination_index
+            and self.test_group_indices == other.test_group_indices
             and self.schema_version == other.schema_version
             and self.exclusion_trace == other.exclusion_trace
         )
@@ -398,6 +560,7 @@ class SplitPlan:
     dataset_digest: str
     split_spec_digest: str
     digest: str
+    path_decomposition: CPCVPathDecomposition | None = None
 
     @property
     def invalid_folds(self) -> tuple[InvalidFold, ...]:
@@ -461,6 +624,73 @@ class ModelSpec:
         object.__setattr__(self, "digest", digest)
 
 
+@dataclass(frozen=True, slots=True)
+class TransformerSpec:
+    """Versioned identity for one fold-local learned transformation."""
+
+    name: str
+    version: str
+    code_digest: str
+    parameters: Mapping[str, Any] = field(default_factory=dict)
+    uses_target: bool = False
+    fit_scope: str = "fold-local"
+    digest: str = field(init=False)
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.name, str) or not self.name.strip():
+            raise DatasetValidationError("transformer name must not be empty")
+        if not isinstance(self.version, str) or not self.version.strip():
+            raise DatasetValidationError("transformer version must not be empty")
+        if (
+            not isinstance(self.code_digest, str)
+            or len(self.code_digest) != 64
+            or any(
+                character not in "0123456789abcdef" for character in self.code_digest
+            )
+        ):
+            raise DatasetValidationError(
+                "transformer code_digest must be a lowercase SHA-256 digest"
+            )
+        if not isinstance(self.uses_target, bool):
+            raise DatasetValidationError("transformer uses_target must be boolean")
+        if self.fit_scope != "fold-local":
+            raise DatasetValidationError("transformer fit_scope must remain fold-local")
+        parameters = dict(self.parameters)
+        try:
+            normalized_parameters = json.loads(
+                json.dumps(
+                    parameters,
+                    ensure_ascii=False,
+                    allow_nan=False,
+                    sort_keys=True,
+                )
+            )
+        except (TypeError, ValueError) as exc:
+            raise DatasetValidationError(
+                "transformer parameters must be canonical JSON values"
+            ) from exc
+        object.__setattr__(self, "name", self.name.strip())
+        object.__setattr__(self, "version", self.version.strip())
+        object.__setattr__(
+            self, "parameters", _deeply_frozen_json(normalized_parameters)
+        )
+        object.__setattr__(
+            self,
+            "digest",
+            canonical_digest(
+                {
+                    "kind": "transformer-spec",
+                    "name": self.name,
+                    "version": self.version,
+                    "code_digest": self.code_digest,
+                    "parameters": normalized_parameters,
+                    "uses_target": self.uses_target,
+                    "fit_scope": self.fit_scope,
+                }
+            ),
+        )
+
+
 MetricFunction = Callable[[np.ndarray, np.ndarray], float]
 
 
@@ -503,7 +733,12 @@ class OOSObservation:
     split_spec_digest: str
     model_digest: str
     pit_snapshot_digest: str
+    feature_manifest_digest: str | None = None
+    transformer_spec_digests: tuple[str, ...] = ()
     evidence_channel: EvidenceChannel = EvidenceChannel.MODEL_SELECTION
+    combination_index: int | None = None
+    group_index: int | None = None
+    path_index: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -531,7 +766,12 @@ class OOSLedger:
                 "split_spec_digest": item.split_spec_digest,
                 "model_digest": item.model_digest,
                 "pit_snapshot_digest": item.pit_snapshot_digest,
+                "feature_manifest_digest": item.feature_manifest_digest,
+                "transformer_spec_digests": list(item.transformer_spec_digests),
                 "evidence_channel": item.evidence_channel.value,
+                "combination_index": item.combination_index,
+                "group_index": item.group_index,
+                "path_index": item.path_index,
             }
             for item in observations
         ]
@@ -575,6 +815,9 @@ class DerivedMetric:
     fold_coverage: float
     ledger_digest: str
     metric_digest: str
+    per_path: tuple[float, ...] = ()
+    path_count: int = 0
+    path_coverage: float = 0.0
 
     @property
     def coverage(self) -> float:

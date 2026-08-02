@@ -2,8 +2,11 @@ schema_version: 1
 scaffold_contract_version: 2
 generated_at: '2026-07-30T14:50:38.293397+00:00'
 name: purged-kfold-validation
-description: Leakage-safe Purged K-Fold model-selection evidence with explicit
-  Information Intervals, Session Axis Embargo, Fold-Local evaluation, and PIT provenance.
+description: Leakage-safe financial validation evidence with explicit Information
+  Intervals, Purged K-Fold, deterministic CPCV Paths, causal Walk-Forward, Fold-Local
+  evaluation, PIT provenance, arbitrary-feature lineage governance, bounded local
+  installable CSV/Parquet audit/evaluation with packaged contracts, a one-attempt final
+  Holdout protocol/store, cross-regime model-ranking evidence, and offline PandaAI benchmarks.
 canonical_root: D:\codexapp\project\purged-kfold-validation
 classification:
   primary_type: library-cli

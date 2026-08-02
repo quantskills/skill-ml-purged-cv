@@ -33,7 +33,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: pip
       - name: Install project
-        run: python -m pip install -e ".[dev,pandas]"
+        run: python -m pip install -e ".[dev,benchmark,upload]"
       - name: Preflight
         run: python tasks/preflight.py
       - name: Test, typecheck, lint, and format

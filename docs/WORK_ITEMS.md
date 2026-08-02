@@ -11,10 +11,28 @@ The `ready-for-agent` Slice 1 specification is `.scratch/purged-kfold-v1/spec.md
 | PKF-005 | P0 | resolved | PKF-002 | PIT-safe formal scoring through the evaluator | 3 PIT scenarios in a 21-test full pass |
 | PKF-006 | P1 | resolved | PKF-004, PKF-005 | Explicit pandas input through the same planning and evaluation path | 4 adapter tests in a 25-test full pass |
 | PKF-007 | P0 | resolved | PKF-002–006 | Slice 1 adversarial evidence, docs and traceability | 41 tests plus full local acceptance and dual-axis review |
-| WF-001 | P1 | planned | PKF-007 | Causal Walk-Forward and Pre-Test Gap | Strict chronology properties |
-| HOLDOUT-001 | P1 | planned | WF-001 | Evaluation Protocol, local store, Holdout Receipt | State-machine and atomicity tests |
-| CPCV-001 | P1 | planned | PKF-007 | General combinations and deterministic Path Decomposition | Combinatorial/path invariants |
-| HPO-001 | P2 | planned | PKF-005, CPCV-001 | Nested HPO and selection evidence | Outer/inner isolation tests |
+| WF-001 | P1 | resolved | PKF-007 | Causal Walk-Forward and Pre-Test Gap | 7 focused causal cases; 52-test full pass |
+| BENCH-001 | P1 | resolved | WF-001 | Offline PandaAI adapter and four-channel benchmark | Synthetic controls plus five-asset real-cache receipt |
+| HOLDOUT-001 | P1 | resolved | WF-001 | Evaluation Protocol, local store, Holdout Receipt | One-time consumption, train-only fit, redacted receipt, and boundary tests |
+| CPCV-001 | P1 | resolved | PKF-007 | General combinations and deterministic Path Decomposition | 30 focused CPCV cases; 82-test full pass; five-asset receipt |
+| DATA-001 | P0 | resolved | CPCV-001 | PandaAI continuous-contract identity governance | Synthetic receipt test plus governed 189,317-row local cache |
+| METRIC-001 | P0 | resolved | DATA-001 | CPCV path financial metrics and distributions | Five native/common/roll-clean path tables |
+| EVAL-001 | P0 | resolved | DATA-001, METRIC-001 | Full-cache three-channel effectiveness comparison | 175,129 observations; 15 CPCV combinations; zero overlap; all sufficiency gates pass |
+| FEATURE-001 | P0 | resolved | EVAL-001 | Immutable arbitrary-feature manifest and governed dataset | Public-seam tests bind manifest into dataset and OOS evidence |
+| FEATURE-002 | P0 | resolved | FEATURE-001 | Explicit pandas arbitrary-feature upload | Ordered feature/availability mapping test and pandas-optional core canary |
+| FEATURE-003 | P0 | resolved | FEATURE-001 | Fold-local transformer lineage | One-to-one spec/factory binding and run-identity regression tests |
+| UPLOAD-001 | P0 | resolved | FEATURE-002 | Versioned local upload contracts and audit command | Audit, rejection, late-availability, limits, and example tests |
+| UPLOAD-002 | P0 | resolved | UPLOAD-001 | Three-channel evaluation and resource limits | Three-channel/path and CPCV-budget tests |
+| UPLOAD-003 | P0 | resolved | FEATURE-003 | High-level transformer identity binding | Report-digest regression test |
+| UPLOAD-004 | P0 | resolved | UPLOAD-001–003 | Examples, docs, packaging, final acceptance | 107 tests; typed/linted build and wheel canary |
+| DISTCLI-001 | P0 | resolved | UPLOAD-004 | Package-native CLI and legacy compatibility wrapper | Module/script output equivalence and 19 CLI cases |
+| DISTCLI-002 | P0 | resolved | DISTCLI-001 | Installed schemas and safe example materialization | Schema, three-example, optional-dependency, and overwrite cases |
+| DISTCLI-003 | P0 | resolved | DISTCLI-001–002 | Console metadata and isolated-wheel acceptance | 117 tests; wheel resources; installed console/module canaries |
+| RESOURCE-001 | P0 | resolved | UPLOAD-001 | Read-before-allocate upload budgets | CSV bounded read and Parquet footer rejection before materialization |
+| ROBUST-001 | P1 | resolved | EVAL-001 | Multi-regime fixed-model ranking stability evidence | Stable and adversarial rank-reversal tests |
+| REALGATE-001 | P0 | resolved | HOLDOUT-001, ROBUST-001 | Governed five-year PandaData release gate | 88,417 eligible observations; zero overlap; stable three-regime ranking; one-attempt Holdout receipt |
+| PROD-001 | P0 | ready-for-human | REALGATE-001 | Freeze v0.6.1 and execute remote cross-platform CI | Local gates/artifacts complete; remote URL and authenticated GitHub CLI still required |
+| HPO-001 | P2 | ready | PKF-005, CPCV-001 | Nested HPO and selection evidence | Outer/inner isolation tests |
 | ADAPTER-001 | P2 | planned | PKF-007 | sklearn compatibility and persistence writers | Optional dependency/canary tests |
 
 ## Execution rule

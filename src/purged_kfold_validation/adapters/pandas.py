@@ -10,6 +10,11 @@ import pandas as pd
 
 from ..domain import InformationInterval, PITSnapshot, ValidationDataset
 from ..errors import AdapterValidationError
+from ..features import (
+    FeatureManifest,
+    GovernedFeatureDataset,
+    govern_feature_dataset,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -176,6 +181,36 @@ def validation_dataset_from_pandas(
         features=features,
         targets=targets,
     )
+
+
+def governed_validation_dataset_from_pandas(
+    frame: pd.DataFrame,
+    *,
+    mapping: PandasDatasetMapping,
+    session_axis: Iterable[Any],
+    pit_snapshot: PITSnapshot,
+    feature_manifest: FeatureManifest,
+) -> GovernedFeatureDataset:
+    """Translate an explicit pandas upload and bind its feature lineage."""
+
+    mapped_names = tuple(
+        str(field.column if field.column is not None else field.index_level)
+        for field in mapping.features
+    )
+    manifest_names = tuple(
+        definition.name for definition in feature_manifest.definitions
+    )
+    if mapped_names != manifest_names:
+        raise AdapterValidationError(
+            "feature mapping order must exactly match manifest names"
+        )
+    dataset = validation_dataset_from_pandas(
+        frame,
+        mapping=mapping,
+        session_axis=session_axis,
+        pit_snapshot=pit_snapshot,
+    )
+    return govern_feature_dataset(dataset, feature_manifest)
 
 
 def _extract(frame: pd.DataFrame, field: PandasField, name: str) -> Any:

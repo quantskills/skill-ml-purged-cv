@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://quantskills.local/purged-kfold-validation/feature-manifest-v1.schema.json",
+  "title": "Governed feature manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "source_bundle_digest", "features"],
+  "properties": {
+    "schema_version": {"const": "1"},
+    "source_bundle_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "features": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name", "source_dataset", "source_fields", "source_digest",
+          "transformation", "transformation_version", "code_digest", "parameters",
+          "lookback_sessions", "computation_scope", "revision_policy", "uses_target"
+        ],
+        "properties": {
+          "name": {"type": "string", "minLength": 1},
+          "source_dataset": {"type": "string", "minLength": 1},
+          "source_fields": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+          "source_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "transformation": {"type": "string", "minLength": 1},
+          "transformation_version": {"type": "string", "minLength": 1},
+          "code_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "parameters": {"type": "object"},
+          "lookback_sessions": {"type": "integer", "minimum": 1},
+          "computation_scope": {"const": "precomputed-stateless"},
+          "revision_policy": {"const": "point-in-time"},
+          "uses_target": {"const": false}
+        }
+      }
+    }
+  }
+}

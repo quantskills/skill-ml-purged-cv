@@ -16,6 +16,7 @@ from purged_kfold_validation import (
     PITSnapshot,
     PredictionShapeError,
     PurgedKFold,
+    TransformerSpec,
     ValidationDataset,
 )
 
@@ -108,6 +109,13 @@ def test_every_execution_stage_fails_without_partial_evidence(
     }
     if stage in {"transformer-fit", "transform"}:
         evaluator_arguments["transformer_factories"] = (lambda: Transformer(stage),)
+        evaluator_arguments["transformer_specs"] = (
+            TransformerSpec(
+                name="failure-transformer",
+                version="1",
+                code_digest="a" * 64,
+            ),
+        )
     if stage == "metric":
         evaluator_arguments["metrics"] = (
             MetricSpec(name="failing", version="1", function=_raising_metric),

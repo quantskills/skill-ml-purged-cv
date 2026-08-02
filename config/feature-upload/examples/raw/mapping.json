@@ -1,0 +1,18 @@
+{
+  "schema_version": "1",
+  "sample_id_column": "sample_id",
+  "session_column": "session",
+  "asset_id_column": "asset",
+  "interval_start_column": "interval_start",
+  "interval_end_column": "interval_end",
+  "decision_time_column": "decision_time",
+  "target_column": "target",
+  "feature_columns": ["raw_close"],
+  "availability_columns": ["raw_close_available"],
+  "session_axis": ["2025-01-02T00:00:00", "2025-01-03T00:00:00", "2025-01-04T00:00:00"],
+  "pit_snapshot": {
+    "snapshot_id": "example-raw-v1",
+    "source_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "revision_policy": "point-in-time"
+  }
+}

@@ -9,13 +9,14 @@ import numpy as np
 
 from .domain import (
     DerivedMetric,
-    EvidenceChannel,
     EvaluationResult,
     FoldAssignment,
     MetricSpec,
     ModelSpec,
     OOSLedger,
     OOSObservation,
+    SplitPlan,
+    TransformerSpec,
     ValidationDataset,
     canonical_digest,
 )
@@ -25,7 +26,12 @@ from .errors import (
     MetricEvaluationError,
     PredictionShapeError,
 )
-from .splitters import PurgedKFold
+
+
+class Splitter(Protocol):
+    """Evidence-bearing split planner accepted by the canonical evaluator."""
+
+    def plan(self, dataset: ValidationDataset) -> SplitPlan: ...
 
 
 class Transformer(Protocol):
@@ -52,10 +58,11 @@ TransformerFactory = Callable[[], Transformer]
 class LeakageSafeEvaluator:
     """Execute a complete split plan without allowing learned state to cross folds."""
 
-    splitter: PurgedKFold
+    splitter: Splitter
     estimator_factory: EstimatorFactory
     model_spec: ModelSpec
     transformer_factories: tuple[TransformerFactory, ...] = ()
+    transformer_specs: tuple[TransformerSpec, ...] = ()
     metrics: tuple[MetricSpec, ...] = ()
 
     def __post_init__(self) -> None:
@@ -66,6 +73,14 @@ class LeakageSafeEvaluator:
         object.__setattr__(
             self, "transformer_factories", tuple(self.transformer_factories)
         )
+        specs = tuple(self.transformer_specs)
+        if len(specs) != len(self.transformer_factories) or any(
+            not isinstance(spec, TransformerSpec) for spec in specs
+        ):
+            raise FactoryLifecycleError(
+                "transformer factories require one ordered TransformerSpec each"
+            )
+        object.__setattr__(self, "transformer_specs", specs)
         object.__setattr__(self, "metrics", tuple(self.metrics))
 
     def evaluate(self, dataset: ValidationDataset) -> EvaluationResult:
@@ -74,6 +89,12 @@ class LeakageSafeEvaluator:
         dataset.require_formal_scoring()
         plan = self.splitter.plan(dataset)
         assignments = plan.require_assignments()
+        channels = {assignment.evidence_channel for assignment in assignments}
+        if len(channels) != 1:
+            raise EvaluationError(
+                "formal evaluation requires one consistent Evidence Channel"
+            )
+        evidence_channel = next(iter(channels))
         snapshot = dataset.pit_snapshot
         assert snapshot is not None
 
@@ -84,7 +105,10 @@ class LeakageSafeEvaluator:
                 "plan_digest": plan.digest,
                 "model_digest": self.model_spec.digest,
                 "metric_digests": [metric.digest for metric in self.metrics],
-                "evidence_channel": EvidenceChannel.MODEL_SELECTION.value,
+                "transformer_spec_digests": [
+                    spec.digest for spec in self.transformer_specs
+                ],
+                "evidence_channel": evidence_channel.value,
             }
         )
         observations: list[OOSObservation] = []
@@ -154,6 +178,25 @@ class LeakageSafeEvaluator:
             )
 
             for position, prediction in zip(assignment.test_positions, predictions):
+                combination_index: int | None = None
+                group_index: int | None = None
+                path_index: int | None = None
+                if plan.path_decomposition is not None:
+                    combination_index = assignment.combination_index
+                    if combination_index is None:
+                        raise EvaluationError(
+                            "CPCV assignment is missing combination identity"
+                        )
+                    group_index = plan.path_decomposition.group_index_for(
+                        dataset.sessions[int(position)]
+                    )
+                    if group_index not in assignment.test_group_indices:
+                        raise EvaluationError(
+                            "CPCV test observation is outside its selected groups"
+                        )
+                    path_index = plan.path_decomposition.path_index_for(
+                        combination_index, group_index
+                    )
                 observations.append(
                     OOSObservation(
                         run_id=run_id,
@@ -172,16 +215,46 @@ class LeakageSafeEvaluator:
                         split_spec_digest=assignment.split_spec_digest,
                         model_digest=self.model_spec.digest,
                         pit_snapshot_digest=snapshot.provenance_digest,
+                        feature_manifest_digest=dataset.feature_manifest_digest,
+                        transformer_spec_digests=tuple(
+                            spec.digest for spec in self.transformer_specs
+                        ),
+                        evidence_channel=evidence_channel,
+                        combination_index=combination_index,
+                        group_index=group_index,
+                        path_index=path_index,
                     )
                 )
 
         position_by_id = {
             sample_id: index for index, sample_id in enumerate(dataset.sample_ids)
         }
-        observations.sort(key=lambda item: position_by_id[item.sample_id])
+        observations.sort(
+            key=lambda item: (
+                position_by_id[item.sample_id],
+                -1 if item.path_index is None else item.path_index,
+                -1 if item.combination_index is None else item.combination_index,
+            )
+        )
+        if plan.path_decomposition is not None:
+            self._require_complete_cpcv_paths(
+                observations,
+                expected_sample_ids=dataset.sample_ids,
+                expected_path_count=plan.path_decomposition.path_count,
+            )
         ledger = OOSLedger(tuple(observations))
         derived = tuple(
-            self._derive_metric(metric, ledger, assignments, len(dataset.sample_ids))
+            self._derive_metric(
+                metric,
+                ledger,
+                assignments,
+                len(dataset.sample_ids),
+                expected_path_count=(
+                    0
+                    if plan.path_decomposition is None
+                    else plan.path_decomposition.path_count
+                ),
+            )
             for metric in self.metrics
         )
         return EvaluationResult(
@@ -189,6 +262,7 @@ class LeakageSafeEvaluator:
             plan_digest=plan.digest,
             ledger=ledger,
             metrics=derived,
+            evidence_channel=evidence_channel,
         )
 
     def _create_transformer(self, factory: TransformerFactory) -> Transformer:
@@ -238,11 +312,33 @@ class LeakageSafeEvaluator:
             raise PredictionShapeError(message)
 
     @staticmethod
+    def _require_complete_cpcv_paths(
+        observations: list[OOSObservation],
+        *,
+        expected_sample_ids: tuple[Any, ...],
+        expected_path_count: int,
+    ) -> None:
+        expected = set(expected_sample_ids)
+        for path_index in range(expected_path_count):
+            path_sample_ids = [
+                item.sample_id for item in observations if item.path_index == path_index
+            ]
+            if (
+                len(path_sample_ids) != len(expected_sample_ids)
+                or set(path_sample_ids) != expected
+            ):
+                raise EvaluationError(
+                    f"CPCV path {path_index} must cover every sample exactly once"
+                )
+
+    @staticmethod
     def _derive_metric(
         metric: MetricSpec,
         ledger: OOSLedger,
         assignments: tuple[FoldAssignment, ...],
         dataset_size: int,
+        *,
+        expected_path_count: int,
     ) -> DerivedMetric:
         try:
             overall = float(metric.function(ledger.targets, ledger.predictions))
@@ -267,8 +363,29 @@ class LeakageSafeEvaluator:
                 )
                 for index in sorted(observations_by_fold)
             )
+            observations_by_path = {
+                path_index: tuple(
+                    item
+                    for item in ledger.observations
+                    if item.path_index == path_index
+                )
+                for path_index in range(expected_path_count)
+            }
+            per_path = tuple(
+                float(
+                    metric.function(
+                        np.asarray(
+                            [item.target for item in observations_by_path[index]]
+                        ),
+                        np.asarray(
+                            [item.prediction for item in observations_by_path[index]]
+                        ),
+                    )
+                )
+                for index in range(expected_path_count)
+            )
             if not np.isfinite(overall) or not all(
-                np.isfinite(value) for value in per_fold
+                np.isfinite(value) for value in (*per_fold, *per_path)
             ):
                 raise MetricEvaluationError(
                     f"metric {metric.name!r} must return finite values"
@@ -278,6 +395,8 @@ class LeakageSafeEvaluator:
         except Exception as exc:
             raise MetricEvaluationError(f"metric {metric.name!r} failed") from exc
         fold_count = sum(bool(values) for values in observations_by_fold.values())
+        path_count = sum(bool(values) for values in observations_by_path.values())
+        unique_sample_count = len({item.sample_id for item in ledger.observations})
         return DerivedMetric(
             name=metric.name,
             version=metric.version,
@@ -285,10 +404,15 @@ class LeakageSafeEvaluator:
             per_fold=per_fold,
             observation_count=len(ledger.observations),
             observation_coverage=(
-                len(ledger.observations) / dataset_size if dataset_size else 0.0
+                unique_sample_count / dataset_size if dataset_size else 0.0
             ),
             fold_count=fold_count,
             fold_coverage=(fold_count / len(assignments) if assignments else 0.0),
             ledger_digest=ledger.digest,
             metric_digest=metric.digest,
+            per_path=per_path,
+            path_count=path_count,
+            path_coverage=(
+                path_count / expected_path_count if expected_path_count else 0.0
+            ),
         )

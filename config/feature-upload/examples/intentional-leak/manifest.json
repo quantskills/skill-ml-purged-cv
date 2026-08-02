@@ -1,0 +1,18 @@
+{
+  "schema_version": "1",
+  "source_bundle_digest": "1111111111111111111111111111111111111111111111111111111111111111",
+  "features": [{
+    "name": "future_return",
+    "source_dataset": "example.intentional-leak",
+    "source_fields": ["future_return"],
+    "source_digest": "2222222222222222222222222222222222222222222222222222222222222222",
+    "transformation": "copy-target",
+    "transformation_version": "1",
+    "code_digest": "3333333333333333333333333333333333333333333333333333333333333333",
+    "parameters": {},
+    "lookback_sessions": 1,
+    "computation_scope": "precomputed-stateless",
+    "revision_policy": "point-in-time",
+    "uses_target": true
+  }]
+}

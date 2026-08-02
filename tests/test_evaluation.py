@@ -12,6 +12,7 @@ from purged_kfold_validation import (
     ModelSpec,
     PITSnapshot,
     PurgedKFold,
+    TransformerSpec,
     ValidationDataset,
 )
 
@@ -88,6 +89,13 @@ def test_user_gets_fold_local_oos_evidence_and_a_versioned_metric() -> None:
         splitter=PurgedKFold(n_splits=2),
         estimator_factory=estimator_factory,
         transformer_factories=(transformer_factory,),
+        transformer_specs=(
+            TransformerSpec(
+                name="recording-centerer",
+                version="1",
+                code_digest="a" * 64,
+            ),
+        ),
         model_spec=ModelSpec(name="toy-mean", version="1"),
         metrics=(
             MetricSpec(

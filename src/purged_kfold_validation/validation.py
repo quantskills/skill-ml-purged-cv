@@ -111,6 +111,17 @@ def normalize_validation_dataset(dataset: ValidationDataset) -> dict[str, Any]:
         dataset.pit_snapshot, PITSnapshot
     ):
         raise DatasetValidationError("pit_snapshot must be a PITSnapshot")
+    feature_manifest_digest = dataset.feature_manifest_digest
+    if feature_manifest_digest is not None and (
+        not isinstance(feature_manifest_digest, str)
+        or len(feature_manifest_digest) != 64
+        or any(
+            character not in "0123456789abcdef" for character in feature_manifest_digest
+        )
+    ):
+        raise DatasetValidationError(
+            "feature_manifest_digest must be a lowercase SHA-256 digest"
+        )
 
     normalized = {
         "schema_version": SCHEMA_VERSION,
@@ -138,6 +149,8 @@ def normalize_validation_dataset(dataset: ValidationDataset) -> dict[str, Any]:
         ),
         "missing_value_policy": missing_value_policy.value,
     }
+    if feature_manifest_digest is not None:
+        normalized["feature_manifest_digest"] = feature_manifest_digest
     return {
         "sample_ids": sample_ids,
         "session_axis": session_axis,
@@ -148,6 +161,7 @@ def normalize_validation_dataset(dataset: ValidationDataset) -> dict[str, Any]:
         "asset_ids": asset_ids,
         "decision_times": decision_times,
         "feature_availability": feature_availability,
+        "feature_manifest_digest": feature_manifest_digest,
         "missing_value_policy": missing_value_policy,
         "digest": canonical_digest(normalized),
     }

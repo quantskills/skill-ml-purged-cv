@@ -1,8 +1,7 @@
 # Interface contract
 
-This document describes the implemented Slice 1 Purged K-Fold model-selection contract.
-The broader CPCV, causal validation, and holdout program remains a roadmap, not a
-current capability.
+This document describes the implemented Purged K-Fold model-selection, CPCV robustness,
+Causal Walk-Forward, governed upload, ranking-stability, and final Holdout contracts.
 
 ## Slice 1 public contract
 
@@ -60,11 +59,137 @@ the core does not import or require pandas.
 
 ## Evidence boundary and non-capabilities
 
-Every Slice 1 result has the `model-selection` Evidence Channel. Two-sided training is
-permitted, so these results are not causal deployment evidence. CPCV combinations and
-paths, Causal Walk-Forward, Pre-Test Gap, Evaluation Protocols, Holdout Receipts,
-Untouched Holdout claims, nested HPO, persistence writers, parallelism, scikit-learn
-compatibility, and external metadata truth verification are not implemented.
+Purged K-Fold results have the `model-selection` Evidence Channel. Two-sided training
+is permitted, so those results are not causal deployment evidence.
+
+`CausalWalkForward.plan(ValidationDataset) -> SplitPlan` creates deterministic past-only
+test blocks. It applies inclusive Information Interval Purge, removes any candidate
+whose information is not strictly earlier than the test block, optionally applies a
+session-based Pre-Test Gap, and supports expanding or bounded sliding training history.
+Assignments and evaluator results retain `causal-walk-forward` identity.
+
+`validation_dataset_from_pandaai_daily` is an explicit optional pandas boundary for
+already-loaded daily rows. `run_validation_benchmark` reports structural overlap,
+coverage, and metrics for two diagnostic baselines plus the two safe channels. The CLI
+loads local parquet only and emits redacted deterministic JSON.
+
+### CPCV robustness seam
+
+`CombinatorialPurgedCV.plan(ValidationDataset) -> SplitPlan` partitions active Trading
+Sessions into chronological groups and enumerates every bounded lexicographic `N,k`
+test-group combination. Each assignment reuses exact inclusive Purge, applies Embargo
+after every contiguous selected test region, preserves panel-session grouping, and
+carries the separate `cpcv-robustness` Evidence Channel.
+
+`SplitPlan.path_decomposition` proves the deterministic assignment of every
+combination/group occurrence to exactly `C(N-1,k-1)` complete paths. Every path contains
+every chronological group once, and selected groups from one combination occupy
+distinct paths. Excessive combination counts, invalid folds, incomplete occurrence
+coverage, or incomplete evaluation paths fail closed.
+
+The evaluator retains repeated CPCV predictions with combination, group, and path
+identity. Derived metrics expose per-combination and per-path projections; observation
+coverage counts unique sample identities. CPCV is two-sided robustness evidence, not
+causal deployment evidence.
+
+Nested HPO, general persistence writers, parallelism, scikit-learn compatibility, and
+external metadata truth verification are not implemented.
+
+### Governed final Holdout seam
+
+`EvaluationProtocol.freeze` binds the training and Holdout dataset digests, fixed model,
+ordered transformer specs, metrics, completed search policy, and split-specification
+identity. The Holdout must be strictly later than training, every training Information
+Interval must end before the first Holdout interval, and sample identities must not
+overlap. Supplied components must exactly match the frozen protocol at execution.
+
+`LocalHoldoutStore.evaluate_once` creates an exclusive claim keyed by Holdout dataset
+digest before any transformer or estimator is created. Both successful and failed
+attempts consume that identity, and a new protocol ID does not permit reuse. Every
+transformer and the estimator fit only on the frozen training dataset. The returned
+OOS evidence has the separate `holdout-confirmation` Evidence Channel.
+
+Only a redacted `HoldoutReceipt` is persisted: protocol, Holdout, run and ledger
+digests, metric values, and evaluation time. Raw rows, features, targets, and
+predictions are not written. The contract governs access through this interface; it
+cannot detect prior or parallel out-of-band inspection of the Holdout files.
+
+### Cross-regime ranking seam
+
+`assess_model_ranking_stability` requires at least two regimes and the exact same set
+of at least two fixed models in each regime. It rejects non-finite or incomparable
+scores and returns median/worst ranks, first-place counts, and every pairwise Spearman
+correlation under a frozen threshold. It is robustness evidence, not Holdout evidence
+or a profitability claim.
 
 The approved requirements remain in `.scratch/purged-kfold-v1/spec.md`; their observed
 implementation evidence is mapped in `docs/requirements-traceability.md`.
+
+## Arbitrary-feature governance seam
+
+`FeatureDefinition` records one uploaded feature's semantic name, source dataset and
+fields, source/code digests, transformation/version/parameters, lookback sessions,
+revision policy, target dependency, and computation scope. `FeatureManifest` preserves
+the exact feature order and binds it to the PIT source-bundle digest.
+
+`govern_feature_dataset(ValidationDataset, FeatureManifest)` requires a two-dimensional
+per-feature availability matrix, source-bundle equality with `PITSnapshot`, feature
+count equality, point-in-time revisions, target independence, and
+`precomputed-stateless` scope. It returns a `GovernedFeatureDataset` and redacted
+`FeatureGovernanceReceipt`; the manifest digest participates in the governed dataset
+digest and every OOS observation.
+
+`governed_validation_dataset_from_pandas` wraps the existing explicit pandas adapter.
+Mapped feature column names and order must exactly match manifest names. It never infers
+feature, availability, formula, session-axis, or provenance fields.
+
+Any learned transformation must remain a fresh fold-local transformer factory.
+`LeakageSafeEvaluator` requires one ordered `TransformerSpec` per transformer factory;
+the spec digests participate in run identity and every OOS observation. A spec is an
+identity/provenance declaration, not permission to share fitted state.
+
+The library verifies metadata consistency, timestamp ordering, digests, declared
+lifecycle, and actual fold-local factory use. It cannot infer stationarity, reconstruct
+feature formulae, or prove that uploaded availability/source declarations are truthful
+from values alone.
+
+### Local feature-upload CLI
+
+`scripts/audit_feature_upload.py` is the repository operator seam for a local `.csv` or
+`.parquet` feature matrix. It requires a closed version-1 Feature Manifest and Upload
+Mapping; schemas and examples live under `config/feature-upload/`. Unknown fields,
+inferred roles, missing per-feature availability, unsupported suffixes, and inconsistent
+feature order are rejected.
+
+The `audit` subcommand performs bounded loading and produces dataset/manifest digests,
+counts, limits, and a `FeatureGovernanceReceipt` without model fitting. The `evaluate`
+subcommand passes the same audit gate, bounds `C(n_groups, n_test_groups)`, and then emits
+the canonical Purged K-Fold, CPCV, and causal Walk-Forward effectiveness report using a
+fresh fold-local ridge baseline. Success exits `0`; governed rejection exits `2` with
+redacted JSON. Neither output includes source rows, feature values, targets, absolute
+paths, or predictions.
+
+CSV loading is capped with a bounded `max_rows + 1` parse rather than a full-file read.
+Parquet footer metadata is inspected before table materialization to enforce row,
+column, and declared uncompressed-byte ceilings. Mapped columns alone are materialized;
+unsupported, missing, or over-budget input fails closed.
+
+`run_cpcv_effectiveness_comparison` also accepts ordered `transformer_factories` and
+`transformer_specs`. Each channel uses the same factory/spec sequence, while the report
+binds ordered spec digests into its own identity. This supports trusted application code
+that constructs fold-local preprocessing; the file upload contract itself never accepts
+or executes such code.
+
+### Installed command and resources
+
+The wheel declares `purged-cv-upload = purged_kfold_validation.cli:main` and supports the
+equivalent `python -m purged_kfold_validation` entry point. The repository script is a
+compatibility wrapper around the same function, so audit/evaluate JSON and exit codes do
+not diverge between installation styles.
+
+`schema --kind manifest|mapping` prints the installed version-1 schema. `example --name
+raw|stationary|intentional-leak --output-dir PATH` materializes the three fixed contract
+files from package data. It checks every target before writing, refuses overwrite, and
+does not expose an arbitrary package path. Schema/example discovery does not import
+pandas. Audit/evaluate require the `upload` optional dependency and otherwise return a
+redacted `OptionalDependencyError` with the installation command.

@@ -1,0 +1,18 @@
+{
+  "schema_version": "1",
+  "source_bundle_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "features": [{
+    "name": "raw_close",
+    "source_dataset": "example.raw.daily",
+    "source_fields": ["close"],
+    "source_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "transformation": "identity",
+    "transformation_version": "1",
+    "code_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "parameters": {},
+    "lookback_sessions": 1,
+    "computation_scope": "precomputed-stateless",
+    "revision_policy": "point-in-time",
+    "uses_target": false
+  }]
+}

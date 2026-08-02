@@ -1,6 +1,10 @@
 """Leakage-safe financial time-series model-selection evidence."""
 
+from .benchmark import BenchmarkChannelResult, BenchmarkReport, run_validation_benchmark
 from .domain import (
+    CPCVPath,
+    CPCVPathDecomposition,
+    CPCVPathOccurrence,
     DerivedMetric,
     EvidenceChannel,
     EvaluationResult,
@@ -17,9 +21,22 @@ from .domain import (
     PITSnapshot,
     SplitPlan,
     TestBlock,
+    TransformerSpec,
     ValidationDataset,
 )
 from .evaluation import LeakageSafeEvaluator
+from .effectiveness import (
+    EffectivenessChannelResult,
+    EffectivenessComparisonConfig,
+    EffectivenessComparisonReport,
+    EvaluationView,
+    FinancialMetrics,
+    GroupBreadth,
+    MetricDistribution,
+    PathFinancialMetrics,
+    TrainingSufficiency,
+    run_cpcv_effectiveness_comparison,
+)
 from .errors import (
     AdapterValidationError,
     DatasetValidationError,
@@ -31,41 +48,102 @@ from .errors import (
     PointInTimeValidationError,
     SplitPlanError,
     TemporalValidationError,
+    UploadLimitError,
     ValidationError,
+    HoldoutEvaluationError,
+    HoldoutProtocolError,
+    RankingStabilityError,
+    ReusedHoldoutError,
 )
-from .splitters import PurgedKFold
+from .features import (
+    FeatureComputationScope,
+    FeatureDefinition,
+    FeatureGovernanceReceipt,
+    FeatureManifest,
+    GovernedFeatureDataset,
+    govern_feature_dataset,
+)
+from .splitters import CausalWalkForward, CombinatorialPurgedCV, PurgedKFold
+from .holdout import (
+    EvaluationProtocol,
+    HoldoutEvaluation,
+    HoldoutReceipt,
+    LocalHoldoutStore,
+)
+from .ranking import (
+    ModelRankSummary,
+    RankingStabilityReport,
+    assess_model_ranking_stability,
+)
 
-__version__ = "0.1.0"
+__version__ = "0.6.1"
 
 __all__ = [
     "AdapterValidationError",
+    "BenchmarkChannelResult",
+    "BenchmarkReport",
+    "CPCVPath",
+    "CPCVPathDecomposition",
+    "CPCVPathOccurrence",
+    "CausalWalkForward",
+    "CombinatorialPurgedCV",
     "DatasetValidationError",
     "DerivedMetric",
     "EvidenceChannel",
+    "EffectivenessChannelResult",
+    "EffectivenessComparisonConfig",
+    "EffectivenessComparisonReport",
     "EvaluationError",
     "EvaluationResult",
+    "EvaluationView",
     "ExclusionRecord",
     "ExclusionSummary",
     "FactoryLifecycleError",
+    "FeatureComputationScope",
+    "FeatureDefinition",
+    "FeatureGovernanceReceipt",
+    "FeatureManifest",
     "FoldAssignment",
+    "FinancialMetrics",
+    "GroupBreadth",
+    "GovernedFeatureDataset",
+    "HoldoutEvaluation",
+    "HoldoutEvaluationError",
+    "HoldoutProtocolError",
+    "HoldoutReceipt",
     "InformationInterval",
     "InvalidFold",
     "InvalidFoldError",
     "LeakageSafeEvaluator",
     "MetricSpec",
+    "MetricDistribution",
     "MetricEvaluationError",
     "MissingValuePolicy",
     "ModelSpec",
+    "ModelRankSummary",
     "OOSLedger",
     "OOSObservation",
     "PITSnapshot",
+    "PathFinancialMetrics",
     "PointInTimeValidationError",
     "PredictionShapeError",
     "PurgedKFold",
+    "RankingStabilityError",
+    "RankingStabilityReport",
+    "ReusedHoldoutError",
     "SplitPlan",
     "SplitPlanError",
     "TemporalValidationError",
     "TestBlock",
+    "TrainingSufficiency",
+    "TransformerSpec",
+    "UploadLimitError",
     "ValidationDataset",
     "ValidationError",
+    "EvaluationProtocol",
+    "LocalHoldoutStore",
+    "assess_model_ranking_stability",
+    "run_validation_benchmark",
+    "run_cpcv_effectiveness_comparison",
+    "govern_feature_dataset",
 ]

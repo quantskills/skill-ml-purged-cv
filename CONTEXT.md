@@ -32,6 +32,38 @@ _Avoid_: Row timestamp, event start
 The latest time at which all information represented by a feature value was actually available to the decision maker.
 _Avoid_: Feature date, observation time
 
+**Feature Definition**:
+An immutable declaration of one uploaded feature's semantic name, ordered source
+fields, source vintage, transformation/code identity, parameters, lookback, revision
+policy, target dependency, and computation lifecycle.
+_Avoid_: Column label, inferred formula
+
+**Feature Manifest**:
+The ordered collection of Feature Definitions bound to the PIT source bundle and then
+to Validation Dataset and OOS evidence by a deterministic digest.
+_Avoid_: Feature list, DataFrame schema
+
+**Governed Feature Dataset**:
+A Validation Dataset whose per-feature availability matrix and manifest have passed
+the uploaded-feature lifecycle rules and produced a redacted governance receipt.
+_Avoid_: Trusted values, leak-free by assertion
+
+**Transformer Spec**:
+The versioned code/parameter identity paired one-to-one with a fold-local transformer
+factory so preprocessing state participates in the evaluation identity.
+_Avoid_: Pipeline name, preprocessing comment
+
+**Feature Upload Contract**:
+The closed, versioned manifest and mapping documents that bind a local CSV/Parquet
+matrix to column roles, Session Axis, PIT Snapshot, per-feature availability, lineage,
+and bounded resource policy before evaluation.
+_Avoid_: Automatic schema detection, arbitrary upload
+
+**Installed Upload Command**:
+The distribution-owned console/module boundary that exposes audit, evaluation, schema
+discovery, and safe example materialization from the same packaged implementation.
+_Avoid_: Repository script copy, unversioned helper
+
 **PIT Snapshot**:
 A point-in-time source snapshot that preserves the values and publication state available at its declared historical cutoff rather than later revisions.
 _Avoid_: Historical export, latest data
@@ -131,3 +163,12 @@ _Avoid_: Purged K-Fold, chronological K-Fold
 **Untouched Holdout**:
 A final evaluation interval excluded from model, feature, threshold, and hyperparameter decisions until the design is frozen.
 _Avoid_: Validation fold, reusable test set
+
+## Current five-year acceptance fact
+
+The governed PandaData run covering 2021-06-18 through 2026-06-18 retained 88,417
+eligible observations across 81 assets and 1,174 Trading Sessions. All three structural
+channels reported zero retained Information Interval overlaps. A final 252-session
+Holdout was consumed exactly once; its MSE is evidence about the frozen intercept-only
+baseline, not a profitability or deployment claim. See
+`docs/evidence/pandadata-five-year-release-gate-20260802.md`.

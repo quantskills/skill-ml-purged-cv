@@ -1,0 +1,18 @@
+{
+  "schema_version": "1",
+  "source_bundle_digest": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+  "features": [{
+    "name": "return_1",
+    "source_dataset": "example.stationary.daily",
+    "source_fields": ["close"],
+    "source_digest": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    "transformation": "simple-return",
+    "transformation_version": "1",
+    "code_digest": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "parameters": {"periods": 1},
+    "lookback_sessions": 2,
+    "computation_scope": "precomputed-stateless",
+    "revision_policy": "point-in-time",
+    "uses_target": false
+  }]
+}

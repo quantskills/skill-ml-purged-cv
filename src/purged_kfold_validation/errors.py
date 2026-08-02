@@ -23,6 +23,26 @@ class AdapterValidationError(DatasetValidationError):
     """An explicit ecosystem mapping cannot construct the canonical dataset."""
 
 
+class UploadLimitError(ValidationError):
+    """A bounded local upload exceeds an explicitly configured resource limit."""
+
+
+class HoldoutProtocolError(ValidationError):
+    """A frozen holdout protocol or its supplied components do not match."""
+
+
+class ReusedHoldoutError(HoldoutProtocolError):
+    """A holdout identity has already been consumed by an evaluation attempt."""
+
+
+class HoldoutEvaluationError(ValidationError):
+    """A one-time holdout evaluation failed after consuming the holdout identity."""
+
+
+class RankingStabilityError(ValidationError):
+    """Cross-regime model-ranking evidence is incomplete or incomparable."""
+
+
 class SplitPlanError(ValidationError):
     """A split configuration or formal split plan is invalid."""
 
