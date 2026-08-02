@@ -9,7 +9,7 @@ Blocked by: GitHub repository URL, installed/authenticated `gh`
 - [x] Cross-platform workflow covers Linux, Windows, macOS and production artifacts.
 - [x] CI installs `benchmark`/`upload` extras so Parquet tests have `pyarrow`.
 - [x] Local complete test/type/lint/build/install gates pass.
-- [ ] Commit current v0.6.1 scope and create local annotated tag.
+- [x] Commit current v0.6.1 scope and create local annotated tag.
 - [ ] Configure `origin` from an explicit repository URL.
 - [ ] Push branch/tag and observe every GitHub Actions matrix job.
 - [ ] Record immutable commit, workflow URL, job conclusions, and production decision.

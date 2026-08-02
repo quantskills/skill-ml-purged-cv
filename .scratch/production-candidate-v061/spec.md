@@ -33,7 +33,7 @@ Status: claimed
 
 | Gate | Current state | Evidence |
 |---|---|---|
-| clean v0.6.1 freeze | in progress | local 132-test/type/build/wheel evidence complete; commit/tag pending |
+| clean v0.6.1 freeze | complete locally | 132-test/type/build/wheel evidence; annotated `v0.6.1` tag is authoritative |
 | remote cross-platform CI | external blocker | workflow present; remote URL and authenticated `gh` absent |
 | one-attempt real Holdout | complete | five-year receipt `245bf378...1355bd` |
 | 3 models × 3 regimes | complete | minimum pairwise Spearman 1.0; mean ranked first |
