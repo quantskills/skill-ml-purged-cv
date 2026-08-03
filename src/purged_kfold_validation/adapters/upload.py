@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import json
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any, Mapping, cast
 
 import pandas as pd
 
@@ -158,7 +158,8 @@ def _read_frame(
         if suffix == ".parquet":
             import pyarrow.parquet as parquet
 
-            metadata = parquet.ParquetFile(path).metadata  # type: ignore[no-untyped-call]
+            parquet_module = cast(Any, parquet)
+            metadata = parquet_module.ParquetFile(path).metadata
             if metadata.num_rows > limits.max_rows:
                 raise UploadLimitError("data row count exceeds max_rows")
             if metadata.num_columns > limits.max_columns:
