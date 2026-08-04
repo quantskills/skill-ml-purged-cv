@@ -2,6 +2,22 @@
 
 This context defines the language used to reason about leakage-safe financial time-series validation. It separates information-aware model selection from causal deployment evidence.
 
+## 文档与实现分层
+
+本文件维护领域词汇和当前事实，不执行验证算法。仓库中的信息按以下层次组织：
+
+| 层次 | 主要文件 | 职责 |
+|---|---|---|
+| Agent 发现 | `SKILL.md`, `agents/openai.yaml` | 触发条件、执行顺序和薄适配 |
+| 用户说明 | `README.md` | 中文介绍、逻辑、输入和使用流程 |
+| 长期治理 | `PROGRAM.md` | 使命、边界、原则和成功门槛 |
+| 领域上下文 | `CONTEXT.md` | 术语、语义和当前验收事实 |
+| 详细契约 | `references/`, `docs/interface-contract.md` | 请求、结果、接口与解释规则 |
+| 可执行实现 | `src/purged_kfold_validation/` | splitter、evaluator、feature governance、Holdout 和 CLI |
+| 验证证据 | `tests/`, `docs/verification.md`, `docs/evidence/` | 回归、属性测试、构建和真实数据回执 |
+
+Markdown 为 Agent 和维护者提供规则与上下文；运行时行为始终以 Python 实现、schema 和测试为准。若文档与可执行证据冲突，应先停止发布并修复漂移，不得让 Agent 自行选择更宽松的解释。
+
 ## Language
 
 **Information Interval**:
@@ -160,9 +176,89 @@ _Avoid_: Path shuffle, fold concatenation
 A validation sequence in which every training Information Interval precedes its test block and time advances without future training groups.
 _Avoid_: Purged K-Fold, chronological K-Fold
 
+**Candidate Strategy**:
+One fully specified strategy and parameter configuration whose session-aligned net returns form a single selection trial.
+_Avoid_: CPCV Path, cost scenario, model prediction
+
+**Strategy Return Matrix**:
+An immutable Trading Session by Candidate Strategy matrix of finite net returns used as the seam between caller-owned strategy generation and selection-overfitting evidence.
+_Avoid_: Feature matrix, OOS Ledger, backtest summary
+
+**Temporal Supervised Sample**:
+One Asset at one Decision Session, with an ordered causal lag sequence, a future label, and an Information Interval spanning every dependency needed by both.
+_Avoid_: Sequence row, sliding window
+
+**Temporal Model Case**:
+One fixed trainable estimator identity and fresh fold factory evaluated without changing its configuration across validation channels.
+_Avoid_: Tuned winner, model family search
+
+**Unsafe Overlap Canary**:
+A deliberately unprotected validation channel retained only to reveal interval overlap and score optimism that safe evidence must exclude.
+_Avoid_: Baseline approval, valid cross-validation
+
+**Validation Optimism Gap**:
+The safe-channel error minus unsafe-channel error for the same fixed model and data, disclosed as a diagnostic rather than a pure causal estimate of leakage bias.
+_Avoid_: Leakage amount, guaranteed overfit penalty
+
+**TSMOM Reference Family**:
+The built-in non-cross-sectional benchmark family in which each asset's position direction is derived only from that asset's own lagged return history.
+_Avoid_: Cross-sectional momentum, production strategy
+
+**Selection Overfitting**:
+The failure mode in which the best in-sample Candidate Strategy owes its apparent advantage to searching many trials and does not preserve its relative rank out of sample.
+_Avoid_: Information leakage, poor absolute return
+
+**CSCV/PBO Evidence**:
+The symmetric complementary-slice evidence that measures how often an in-sample winning Candidate Strategy falls below the out-of-sample candidate median.
+_Avoid_: CPCV Path evidence, p-value
+
+**Deflated Sharpe Evidence**:
+The probability evidence that a selected Sharpe exceeds a multiple-trial benchmark after accounting for sample length and non-normal returns.
+_Avoid_: Raw Sharpe, profitability guarantee
+
+**Acceptance Policy**:
+An immutable, digest-bound set of cost scenarios and metric thresholds registered before strategy benchmark evidence is observed.
+_Avoid_: Post-hoc cutoff, tuned pass criteria
+
+**Research Gate**:
+A decision over pre-registered PBO, Deflated Sharpe, CPCV path-tail, causal Walk-Forward, and cost-stress evidence that remains separate from final deployment authorization.
+_Avoid_: Production approval, attractive backtest
+
+**Production Gate**:
+A governed decision that requires a passing Research Gate plus eligible one-time Untouched Holdout evidence when the Acceptance Policy requires it.
+_Avoid_: Research score, local test pass
+
+**Evidence Gap**:
+A machine-readable statement of evidence still missing or ineligible for a requested claim, such as an unrun or reused strategy Holdout.
+_Avoid_: Warning-only failure, assumed evidence
+
+**Selection Regret**:
+The difference between a causally selected candidate's test performance and the hindsight-best candidate performance on the same test block.
+_Avoid_: Trading loss, prediction error
+
 **Untouched Holdout**:
 A final evaluation interval excluded from model, feature, threshold, and hyperparameter decisions until the design is frozen.
 _Avoid_: Validation fold, reusable test set
+
+**Temporal Forward Protocol**:
+An immutable declaration binding consumed development evidence, one selected model, a strictly future start, label maturity, sufficiency gates, and acceptance checks before any eligible forecast is recorded.
+_Avoid_: New backtest config, renamed Holdout
+
+**Prediction Receipt**:
+An append-only forecast identity durably recorded before its declared future label becomes available, without a target or raw feature payload.
+_Avoid_: Replayed prediction, score row
+
+**Matured Label Settlement**:
+An append-only target binding created after label availability and referencing exactly one prior Prediction Receipt.
+_Avoid_: Backfilled forecast, mutable result row
+
+**Forward Evidence Ledger**:
+The local ordered collection of Prediction Receipts and Matured Label Settlements used to project redacted future-evidence status and metrics.
+_Avoid_: Historical OOS Ledger, editable CSV
+
+**Evidence Maturity**:
+The governed state `WAITING_FOR_FUTURE_DATA`, `COLLECTING`, `READY_FOR_REVIEW`, or `FAIL`, determined by pre-registered sample sufficiency and metric checks.
+_Avoid_: Deployment approval, manual confidence label
 
 ## Current five-year acceptance fact
 
@@ -172,3 +268,46 @@ channels reported zero retained Information Interval overlaps. A final 252-sessi
 Holdout was consumed exactly once; its MSE is evidence about the frozen intercept-only
 baseline, not a profitability or deployment claim. See
 `docs/evidence/pandadata-five-year-release-gate-20260802.md`.
+
+## Current Agent consumption fact
+
+The root `SKILL.md` and `purged-cv-skill` command provide a thin Agent-neutral consumption
+layer over the same installed engine. One versioned request JSON produces one redacted,
+versioned result envelope. The adapter contains no splitter, evaluator, feature-governance,
+or Holdout logic and does not change the established evidence-channel boundaries.
+
+## Current strategy-selection acceptance fact
+
+Version 0.7.1 accepts a generic Strategy Return Matrix and supplies a built-in 32-candidate
+TSMOM Reference Family. CSCV/PBO, Deflated Sharpe Evidence, CPCV selected paths, causal
+Walk-Forward Selection Regret, four offline cost scenarios, package schemas, and the installed
+command passed 150 local tests and an isolated-wheel canary. A subsequent authorized
+PandaData run covered 15 assets and 1,210 common Sessions from 2021-08-03 through
+2026-08-03. PBO and positive CPCV/Walk-Forward gates passed, while Deflated Sharpe
+Evidence remained below the example 0.95 production gate. This is promising but
+insufficient strategy evidence, not a failure of the validation tool. The versioned
+Acceptance Policy now emits separate validation-tool, Research Gate, and Production Gate
+statuses, exact failed checks, Holdout Evidence Gaps, and a non-guaranteed DSR track-record
+approximation without retuning the registered candidate family.
+
+## Current trainable temporal-model fact
+
+Version 0.8.0 evaluates fixed NumPy Ridge, LightGBM, and PyTorch LSTM estimators through
+unsafe shuffled K-Fold, chronological no-purge, Purged K-Fold, Purged K-Fold plus Embargo,
+CPCV, and causal Walk-Forward. The governed lag-20/T+5 PandaData comparison contains
+17,775 observations across 15 assets and 1,185 Decision Sessions. Unsafe shuffled folds
+retain interval overlap while all formal channels retain zero overlap. Complete
+Information Interval Purge already covers the registered 20-Session Embargo zone, so the
+Embargo has no incremental exclusions in that run. This is structural validation evidence,
+not model profitability, final Holdout, or production authorization.
+
+## Current temporal forward-evidence fact
+
+Version 0.9.0 freezes the observed v0.8 development comparison and selects its lowest
+causal Walk-Forward MSE case, LightGBM lag-20/T+5, without further tuning. A new
+Prediction Receipt must be persisted before label availability and can only be paired
+with a Matured Label Settlement afterwards. The initial PandaData protocol starts after
+the 2026-08-03 development label boundary and is honestly
+`WAITING_FOR_FUTURE_DATA`. It requires 252 matured Decision Sessions, 3,000 settled
+observations, and 8 assets before metric checks can produce `READY_FOR_REVIEW` or `FAIL`.
+Neither state grants production authorization.

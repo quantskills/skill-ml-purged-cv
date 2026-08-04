@@ -1,0 +1,4 @@
+interface:
+  display_name: "Purged CV 防泄漏验证"
+  short_description: "审计金融特征、时序模型与策略选择中的信息泄漏和未来验证证据"
+  default_prompt: "使用 $skill-ml-purged-cv 审计我的金融特征或时序模型，并生成 Purged K-Fold、CPCV、Walk-Forward 与 Forward Evidence 证据。"

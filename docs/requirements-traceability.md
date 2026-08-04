@@ -72,7 +72,18 @@ latest-revision feature leakage.
 | Dist CLI 3 | Example materialization uses fixed filenames and refuses known conflicts before writing | no-overwrite regression in `test_feature_upload_cli.py` | verified |
 | Dist CLI 4 | Schema/example discovery preserves the pandas-optional base boundary; audit gives safe extra-install guidance | import-blocking canaries in `test_installable_cli_contract.py` | verified |
 | Dist CLI 5 | Metadata declares version, console script, upload extra, and explicit package data | `test_installable_cli_contract.py`; Twine and wheel inspection | verified |
+| Forward 1–7 | Frozen future boundary, prediction-before-label receipt, append-only settlement, sufficiency/metric state machine, redacted status, and Agent-neutral CLI | `test_temporal_forward.py`; `test_forward_cli.py`; ADR 0012; v0.9.0 wheel canary | verified; real state waiting for future data |
 | Dist CLI 6 | Installed console prints schema, exports raw example, audits it, and module entry prints mapping schema | isolated venv receipt in `docs/evidence/installable-upload-cli-20260802.md` | verified |
+
+## Agent-neutral Skill delivery slice
+
+| Product invariant | Implemented behavior | Observed verification | Status |
+|---|---|---|---|
+| Skill 1 | Root `SKILL.md` exposes one concise portable workflow while detailed contracts load progressively | Skill official validator; `test_project_contract.py` | verified |
+| Skill 2 | One request JSON delegates to the canonical CLI and preserves its result in a standard redacted envelope | `test_agent_skill_cli.py` request and demo cases | verified |
+| Skill 3 | Unknown fields, invalid action options, bad ranges, engine timeout, stderr, or invalid JSON fail closed | `agent_cli.py`; rejection regressions in `test_agent_skill_cli.py` | verified |
+| Skill 4 | Request/result schemas and minimal example are installed package resources | package metadata contract; schema/example subprocess cases | verified |
+| Skill 5 | README provides one install command, one smoke-test command, one minimal request, and standard JSON shape | `README.md`; isolated-wheel verification pending final gate | implemented |
 
 ## Release-hardening and governed-Holdout slice
 
@@ -94,3 +105,15 @@ latest-revision feature leakage.
 | Real gate 4 | Three chronological development regimes rank one frozen candidate set before final Holdout access | identical ranking in all regimes; minimum pairwise Spearman 1.0 | verified |
 | Real gate 5 | Final 252-session Holdout is claimed before fitting and cannot be queried again after success or failure | persisted receipt `245bf378...1355bd`; recovery reused only the receipt, never the Holdout | verified |
 | Real gate 6 | Evidence distinguishes leakage controls from feature/model effectiveness and profitability | intercept-only mean wins by a small margin; Holdout reports MSE only; no profitability/deployment claim | verified |
+
+## Time-series strategy selection benchmark slice
+
+| Spec invariant | Implemented behavior | Observed verification | Status |
+|---|---|---|---|
+| TS Bench 1 | Generic immutable Session × Candidate Strategy gross/net return and turnover seam with deterministic digests | `test_time_series_strategy_benchmark.py` input and determinism cases | verified |
+| TS Bench 2 | Built-in 32-candidate, per-asset TSMOM family uses lagged prices/volatility and prior frozen weights | lag-causality and registered-grid tests | verified |
+| TS Bench 3 | Offline turnover cost is applied to the same gross-return trajectory and cost scenarios remain separate from trials | cost monotonicity and scenario-isolation tests | verified |
+| TS Bench 4 | CSCV/PBO and DSR report candidate trial count, rank-failure probability, non-normal moments, and deflated threshold | generic matrix and deliberate rank-reversal tests | verified |
+| TS Bench 5 | Existing deterministic CPCV decomposition reconstructs complete selected-candidate paths and reports median/P10/worst/IQR | five-path coverage test | verified |
+| TS Bench 6 | Expanding Walk-Forward selects only on prior Sessions and reports hindsight regret | future-mutation causality test | verified |
+| TS Bench 7 | Installed JSON command accepts pickle-free NPZ inputs, publishes schemas, and fails closed on wrong archive contracts | `test_strategy_benchmark_cli.py` | verified |

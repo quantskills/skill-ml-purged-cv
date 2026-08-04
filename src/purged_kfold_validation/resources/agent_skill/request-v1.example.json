@@ -1,0 +1,9 @@
+{
+  "schema_version": "1",
+  "action": "audit",
+  "data_path": "features.csv",
+  "manifest_path": "manifest.json",
+  "mapping_path": "mapping.json",
+  "timeout_seconds": 900,
+  "options": {}
+}

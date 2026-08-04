@@ -31,6 +31,11 @@ The `ready-for-agent` Slice 1 specification is `.scratch/purged-kfold-v1/spec.md
 | RESOURCE-001 | P0 | resolved | UPLOAD-001 | Read-before-allocate upload budgets | CSV bounded read and Parquet footer rejection before materialization |
 | ROBUST-001 | P1 | resolved | EVAL-001 | Multi-regime fixed-model ranking stability evidence | Stable and adversarial rank-reversal tests |
 | REALGATE-001 | P0 | resolved | HOLDOUT-001, ROBUST-001 | Governed five-year PandaData release gate | 88,417 eligible observations; zero overlap; stable three-regime ranking; one-attempt Holdout receipt |
+| SKILL-001 | P0 | resolved | DISTCLI-003, REALGATE-001 | Portable Skill discovery, one-request execution, schemas, Quick Start | Root Skill, standard JSON envelope, demo/example/schema commands, contract tests |
+| TSBENCH-001 | P0 | resolved | CPCV-001, WF-001 | Generic strategy-return audit plus built-in TSMOM time-series benchmark | 150 full tests; strict quality gate; 0.7.0 artifacts; isolated 32-trial/4-cost canary |
+| REALTS-001 | P0 | resolved | TSBENCH-001 | Five-year multi-asset PandaData TSMOM selection benchmark | 15 assets; 1,210 Sessions; formal CLI match; PBO pass; DSR production gate fail |
+| ACCEPT-001 | P0 | resolved | REALTS-001 | Pre-registered strategy acceptance decisions, evidence gaps, and DSR track-record diagnostics | 159 tests; v0.7.1 build/Twine/wheel canary; PandaData PASS/FAIL/FAIL replay |
+| TMODEL-001 | P0 | resolved | ACCEPT-001 | Trainable temporal-model leakage comparison across unsafe, Purged, Embargo, CPCV, and causal channels | 168 tests; 17,775-row three-model replay; unsafe overlaps detected; all safe overlaps zero |
 | PROD-001 | P0 | ready-for-human | REALGATE-001 | Freeze v0.6.1 and execute remote cross-platform CI | Local gates/artifacts complete; remote URL and authenticated GitHub CLI still required |
 | HPO-001 | P2 | ready | PKF-005, CPCV-001 | Nested HPO and selection evidence | Outer/inner isolation tests |
 | ADAPTER-001 | P2 | planned | PKF-007 | sklearn compatibility and persistence writers | Optional dependency/canary tests |

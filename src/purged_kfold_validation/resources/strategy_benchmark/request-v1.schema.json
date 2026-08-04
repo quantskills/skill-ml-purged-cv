@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://quantskills.dev/purged-cv/strategy-request-v1.schema.json",
+  "title": "Time-series strategy benchmark request v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "action", "data_path"],
+  "properties": {
+    "schema_version": {"const": "1"},
+    "action": {"enum": ["analyze-return-matrix", "benchmark-tsmom", "benchmark-temporal-models"]},
+    "data_path": {"type": "string", "minLength": 1},
+    "options": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "annualization_sessions": {"type": "integer", "minimum": 2},
+        "cscv_groups": {"type": "integer", "minimum": 4},
+        "cpcv_groups": {"type": "integer", "minimum": 3},
+        "cpcv_test_groups": {"type": "integer", "minimum": 2},
+        "cpcv_embargo_sessions": {"type": "integer", "minimum": 0},
+        "walk_forward_windows": {"type": "integer", "minimum": 1},
+        "minimum_train_sessions": {"type": "integer", "minimum": 2},
+        "cost_bps": {"type": "number", "minimum": 0},
+        "cost_scenarios_bps": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "number", "minimum": 0}
+        },
+        "lookback_sessions": {"type": "integer", "minimum": 2},
+        "label_horizon_sessions": {"type": "integer", "minimum": 1},
+        "n_splits": {"type": "integer", "minimum": 2},
+        "embargo_sessions": {"type": "integer", "minimum": 0},
+        "pre_test_gap_sessions": {"type": "integer", "minimum": 0},
+        "walk_forward_test_sessions": {"type": "integer", "minimum": 1},
+        "minimum_train_observations": {"type": "integer", "minimum": 1},
+        "random_seed": {"type": "integer"},
+        "models": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"enum": ["numpy-ridge", "lightgbm", "torch-lstm"]}
+        },
+        "lightgbm_estimators": {"type": "integer", "minimum": 1},
+        "lstm_epochs": {"type": "integer", "minimum": 1},
+        "ridge_alpha": {"type": "number", "exclusiveMinimum": 0}
+      }
+    }
+  }
+}

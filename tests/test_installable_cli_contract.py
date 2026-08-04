@@ -14,19 +14,24 @@ def test_distribution_declares_console_upload_extra_and_package_resources() -> N
     with (ROOT / "pyproject.toml").open("rb") as handle:
         project = tomllib.load(handle)
 
-    assert project["project"]["version"] == "0.6.1"
+    assert project["project"]["version"] == "0.9.0"
     assert project["project"]["dependencies"] == ["numpy>=1.26"]
     assert project["project"]["scripts"] == {
-        "purged-cv-upload": "purged_kfold_validation.cli:main"
+        "purged-cv-skill": "purged_kfold_validation.agent_cli:main",
+        "purged-cv-strategy": "purged_kfold_validation.strategy_cli:main",
+        "purged-cv-upload": "purged_kfold_validation.cli:main",
+        "purged-cv-forward": "purged_kfold_validation.forward_cli:main",
     }
     assert project["project"]["optional-dependencies"]["upload"] == [
         "pandas>=2.1",
         "pyarrow>=15",
     ]
     assert project["tool"]["setuptools"]["package-data"]["purged_kfold_validation"] == [
+        "resources/agent_skill/*.json",
         "resources/feature_upload/*.json",
         "resources/feature_upload/examples/*/*.csv",
         "resources/feature_upload/examples/*/*.json",
+        "resources/strategy_benchmark/*.json",
     ]
 
 

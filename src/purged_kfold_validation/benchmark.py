@@ -132,6 +132,9 @@ def run_validation_benchmark(
     embargo_sessions: int = 0,
     pre_test_gap_sessions: int = 0,
     random_seed: int = 0,
+    test_sessions: int | None = None,
+    min_train_observations: int = 1,
+    min_train_sessions: int = 1,
 ) -> BenchmarkReport:
     """Compare two diagnostic baselines with Purged and causal evidence."""
 
@@ -145,7 +148,24 @@ def run_validation_benchmark(
         raise SplitPlanError(
             "benchmark n_splits must be smaller than active session count"
         )
-    test_sessions = max(1, len(active_sessions) // (n_splits + 1))
+    if test_sessions is None:
+        test_sessions = max(1, len(active_sessions) // (n_splits + 1))
+    elif (
+        isinstance(test_sessions, bool)
+        or not isinstance(test_sessions, int)
+        or test_sessions < 1
+    ):
+        raise SplitPlanError("benchmark test_sessions must be a positive integer")
+    for name, value in (
+        ("min_train_observations", min_train_observations),
+        ("min_train_sessions", min_train_sessions),
+    ):
+        if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+            raise SplitPlanError(f"benchmark {name} must be a positive integer")
+    if n_splits * test_sessions >= len(active_sessions):
+        raise SplitPlanError(
+            "benchmark test windows must leave at least one training session"
+        )
 
     shuffled = _shuffled_session_assignments(
         dataset,
@@ -162,11 +182,15 @@ def run_validation_benchmark(
     purged = PurgedKFold(
         n_splits=n_splits,
         embargo_sessions=embargo_sessions,
+        min_train_samples=min_train_observations,
+        min_train_sessions=min_train_sessions,
     )
     causal = CausalWalkForward(
         n_splits=n_splits,
         test_sessions=test_sessions,
         pre_test_gap_sessions=pre_test_gap_sessions,
+        min_train_samples=min_train_observations,
+        min_train_sessions=min_train_sessions,
     )
     channels = (
         _evaluate_baseline(

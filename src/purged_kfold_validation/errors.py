@@ -39,8 +39,20 @@ class HoldoutEvaluationError(ValidationError):
     """A one-time holdout evaluation failed after consuming the holdout identity."""
 
 
+class ForwardEvidenceError(ValidationError):
+    """A temporal forward-evidence protocol or ledger operation is invalid."""
+
+
+class DuplicateForwardEvidenceError(ForwardEvidenceError):
+    """An append-only forward prediction or settlement identity already exists."""
+
+
 class RankingStabilityError(ValidationError):
     """Cross-regime model-ranking evidence is incomplete or incomparable."""
+
+
+class StrategyBenchmarkError(ValidationError):
+    """Strategy-return or selection-overfitting evidence is invalid."""
 
 
 class SplitPlanError(ValidationError):

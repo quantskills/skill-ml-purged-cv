@@ -193,3 +193,119 @@ files from package data. It checks every target before writing, refuses overwrit
 does not expose an arbitrary package path. Schema/example discovery does not import
 pandas. Audit/evaluate require the `upload` optional dependency and otherwise return a
 redacted `OptionalDependencyError` with the installation command.
+
+### Agent-neutral Skill seam
+
+The root `SKILL.md` is the portable discovery and execution contract. Agent-specific UI
+metadata contains no validation behavior. `purged-cv-skill run --request PATH` accepts one
+closed, size-bounded version-1 JSON request, resolves relative inputs against that request,
+and delegates to the installed `purged_kfold_validation` module in a bounded subprocess.
+
+The command emits exactly one version-1 JSON envelope. It binds a canonical request digest,
+engine identity, unchanged `authoritative_cli_result`, warnings, and typed errors without
+exposing absolute input paths, rows, features, targets, or predictions. Unknown fields,
+action-incompatible options, invalid ranges, timeout, unexpected stderr, and non-JSON engine
+output fail closed with exit code `2`.
+
+`purged-cv-skill demo` is the one-command installation smoke test. `example --output-dir`
+atomically materializes a fixed raw feature bundle plus its single `request.json`, refusing an
+existing target. `schema --kind request|result` prints the exact packaged machine contracts.
+The wrapper does not implement Purge, Embargo, CPCV, Walk-Forward, feature governance, or
+Holdout behavior; the maintained library remains the sole algorithm owner.
+
+### Time-series strategy selection seam
+
+`StrategyReturnMatrix` is the generic seam between caller-owned strategy generation and
+selection-overfitting evidence. It contains strictly increasing Trading Sessions, unique
+Candidate Strategy identities, and aligned finite gross-return, net-return, and turnover
+matrices. `analyze_strategy_return_matrix` hides CSCV/PBO enumeration, DSR correction,
+CPCV training-side selection/path reconstruction, and causal expanding-window selection
+behind one immutable result interface.
+
+`DensePricePanel` and `build_tsmom_return_matrix` form a separate built-in adapter at this
+seam. The adapter uses each asset's own lagged price direction, lagged realized volatility,
+frozen prior weights, and an offline turnover-cost rule. It does not perform cross-sectional
+ranking, continuous-contract construction, order execution, capacity analysis, or external
+PIT verification.
+
+`purged-cv-strategy run --request PATH` accepts a closed version-1 request and an `.npz`
+loaded with `allow_pickle=False`. `analyze-return-matrix` requires exactly `sessions`,
+`candidate_ids`, `gross_returns`, `net_returns`, and `turnover`; `benchmark-tsmom` requires
+exactly `sessions`, `asset_ids`, `signal_prices`, and `tradable_returns`. The file is capped
+at 512 MiB, the request at 1 MiB, and unknown fields or archive members fail closed.
+
+Cost scenarios remain separate reports and do not increase PBO/DSR trial counts. PBO is a
+candidate-rank failure probability rather than a p-value. Every report warns that structural
+or selection evidence is not profitability, execution, deployment, or investment advice.
+
+### Strategy acceptance decision seam
+
+`assess_time_series_benchmark` is the only public boundary that turns a completed
+`TimeSeriesBenchmarkReport` into gate decisions. It receives an immutable,
+digest-bound `StrategyAcceptancePolicy` and redacted `StrategyHoldoutEvidence`; the
+benchmark engine never changes thresholds in response to observed results.
+
+The decision reports `validation_tool_status`, `research_gate_status`, and
+`production_gate_status` separately. Missing registered primary or stress cost scenarios
+fail closed. A failed Research Gate forces Production to FAIL. A passing Research Gate
+with a required but unrun Holdout is INCONCLUSIVE; only eligible `UNTOUCHED_PASS`
+evidence can complete that gate. Reused Holdout evidence is ineligible.
+
+Each check retains its code, observed value, threshold, comparison, and cost scenario.
+The DSR track-record gap uses the report's selected/benchmark Sharpe, sample moments,
+annualization, and observation count. It is explicitly a constant-distribution
+approximation, not a guarantee and not a replacement for untouched confirmation.
+
+The `benchmark-tsmom` CLI appends this canonical decision under `report.acceptance`.
+`analyze-return-matrix` remains a single-cost evidence report and does not fabricate a
+multi-cost production decision.
+
+### Trainable temporal-model comparison seam
+
+`build_temporal_supervised_dataset` maps one governed `DensePricePanel` into Asset by
+Decision Session samples. Each sample holds an ordered own-return lag sequence, a future
+return label, per-lag Feature Availability, and one inclusive Information Interval from
+the earliest lag dependency through label completion. Panel Session grouping prevents
+assets from the same Session crossing validation sides.
+
+`run_temporal_model_benchmark` accepts that dataset, fixed `TemporalModelCase` factories,
+and one digest-bound comparison configuration. It runs unsafe shuffled Session K-Fold,
+chronological no-purge, Purged K-Fold without Embargo, Purged K-Fold with Embargo, CPCV,
+and causal Walk-Forward through the maintained evaluator. Model adapters never choose or
+implement split logic; splitters never construct or tune models.
+
+The registered adapters are fold-local standardized NumPy Ridge, fixed-parameter
+LightGBM, and a small CPU PyTorch LSTM that reshapes ordered lag columns as a sequence.
+LightGBM and PyTorch are optional dependencies and are never silently substituted.
+
+Every safe channel must retain zero Information Interval overlap. The report keeps MSE,
+fold/path distributions, coverage, exclusions, minimum training geometry, and unsafe
+optimism gaps. Embargo can validly have zero incremental exclusions when the complete
+Information Interval Purge already covers its zone; this is disclosed separately from
+whether the Embargo policy executed. Structural PASS never authorizes production.
+
+`purged-cv-strategy` exposes the same seam as action `benchmark-temporal-models` over the
+existing dense-panel NPZ contract. It does not accept executable user model code.
+
+### Temporal forward-evidence seam
+
+`TemporalForwardProtocol` freezes the consumed development report/data digests, selected
+model and temporal dataset spec, development label boundary, strictly future start,
+label horizon, maturity requirements, and metric checks. Its identity cannot be rebound
+after predictions exist.
+
+`LocalTemporalForwardStore` uses exclusive-create files for protocols, sample claims,
+predictions, settlements, and report snapshots. A Prediction Receipt contains no target
+or raw feature values and must be recorded before `label_available_at`. A Matured Label
+Settlement must reference an existing prediction and can be created only after that
+instant. Duplicate sample claims, duplicate settlements, orphan settlements, and digest
+mismatches fail closed.
+
+`ForwardEvidenceReport` exposes only counts, aggregate MSE/baseline MSE/mean per-session
+Spearman IC, checks, status, and digests. `WAITING_FOR_FUTURE_DATA` means no eligible
+forecast exists; `COLLECTING` means evidence is below a sufficiency gate;
+`READY_FOR_REVIEW` and `FAIL` are emitted only after all sufficiency gates pass. The
+report always returns `production_authorization=NOT_AUTHORIZED`.
+It also returns `attestation_scope=LOCAL_APPEND_ONLY_NOT_EXTERNALLY_NOTARIZED` because
+exclusive local files and caller-visible clocks are not an external timestamp or WORM
+attestation. Production-grade non-repudiation requires an independently controlled sink.

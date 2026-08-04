@@ -202,3 +202,128 @@ profitability, publication, deployment, rollback, or production observation.
 
 The full metrics, digests, recovery boundary, and interpretation are recorded in
 `docs/evidence/pandadata-five-year-release-gate-20260802.md`.
+
+## Agent-neutral Skill productization — 2026-08-03
+
+| Command / canary | Observed result |
+|---|---|
+| Skill official validator | valid root `SKILL.md` and frontmatter |
+| Agent CLI focused tests | 10 passed |
+| `python tasks/preflight.py` | success; no contract errors |
+| `python tasks/test.py` | success; complete repository quality gate |
+| `python -m pytest -q` | 138 passed |
+| strict mypy | success; no issues in 47 source files during the complete gate |
+| Ruff check / format check | all checks passed after formatting 2 new files |
+| `python -m build --no-isolation` | 0.6.1 wheel and source distribution built successfully |
+| Twine check | both 0.6.1 artifacts passed |
+| isolated wheel canary | request schema and one-command demo succeeded outside the source tree |
+| installed metadata canary | both `purged-cv-skill` and `purged-cv-upload` entry points present |
+
+The Skill layer adds only discovery, orchestration, packaged schemas, and a redacted result
+envelope. It does not alter algorithm behavior or turn local structural/model evidence into a
+profitability, deployment, or external metadata-truth claim.
+
+## Time-series strategy selection benchmark — 2026-08-03
+
+| Command / canary | Observed result |
+|---|---|
+| focused strategy/CLI tests | 12 passed |
+| `python tasks/preflight.py` | success |
+| `python tasks/test.py` | success; complete repository quality gate |
+| `python -m pytest -q` | 150 passed |
+| strict MyPy and Ruff | success |
+| `python -m pip check` | no broken requirements |
+| `python -m build --no-isolation` | 0.7.0 wheel and sdist built |
+| Twine check | both 0.7.0 artifacts passed |
+| isolated installed-wheel canary | version 0.7.0; strategy schema; 32 trials; 4 cost scenarios |
+| installed metadata canary | all three `purged-cv-*` entry points present |
+
+The deterministic demo intentionally produces high PBO (0.8286 at zero cost) and DSR
+probability below 0.95 (0.8808), demonstrating that an attractive full-sample Sharpe is
+not automatically accepted. A subsequent authorized PandaData API run covered 15 assets
+and 1,210 common Sessions. It passed PBO and positive CPCV/Walk-Forward gates but failed
+DSR `>= 0.95`; see `docs/evidence/pandadata-tsmom-selection-benchmark-20260803.md`.
+
+## Pre-registered strategy acceptance decision — 2026-08-04
+
+| Command / canary | Observed result |
+|---|---|
+| focused acceptance/strategy/CLI tests | 21 passed |
+| `python tasks/preflight.py` | success |
+| `python tasks/test.py` | success; complete repository quality gate |
+| `python -m pytest -q` | 159 passed |
+| strict MyPy and Ruff | success |
+| `python -m build --no-isolation` | 0.7.1 wheel and sdist built |
+| Twine check | both 0.7.1 artifacts passed |
+| isolated installed-wheel canary | version 0.7.1; 32 trials; 4 cost scenarios; acceptance statuses present |
+| PandaData v0.7.1 replay | validation PASS; research FAIL; production FAIL |
+
+At the 3 bps primary scenario, DSR is 0.7034292572 and fails the pre-registered 0.95
+threshold while PBO, CPCV path-tail, and causal Walk-Forward checks pass. The
+constant-distribution approximation estimates 11,460 total Sessions (10,250 additional),
+but is not a guarantee. The untouched strategy Holdout remains unrun. Full evidence is
+recorded in `docs/evidence/strategy-acceptance-decision-v071-20260804.md`.
+
+## Trainable temporal-model leakage comparison — 2026-08-04
+
+| Command / canary | Observed result |
+|---|---|
+| focused temporal-model/CLI tests | 17 passed |
+| complete Pytest suite | 168 passed |
+| `python tasks/preflight.py` | success |
+| `python tasks/test.py` | success; Ruff, format, strict MyPy, Pytest, pip check |
+| full PandaData three-model CLI | 17,775 observations; 15 assets; 1,185 Sessions |
+| unsafe overlap canaries | shuffled 71,100; chronological no-purge 1,875 |
+| formal channel overlap | Purged, Purged+Embargo, CPCV, Walk-Forward all zero |
+| current report digest | `c3e8f962b950e307958ff622694b8595afd9d581bc73b9316f71f948a3f9cd38` |
+| `python -m build --no-isolation` | 0.8.0 wheel and sdist built |
+| Twine check | both 0.8.0 artifacts passed |
+| isolated installed-wheel canary | version 0.8.0; six channels; structural PASS; production NOT_AUTHORIZED |
+
+The fixed NumPy Ridge, LightGBM, and CPU PyTorch LSTM models all used the same lag-20/T+5
+dataset and fold-local estimator lifecycle. Complete intervals made the 20-Session
+Embargo incrementally redundant after Purge; the policy remained active and disclosed.
+Structural leakage control passed; production authorization remained NOT_AUTHORIZED.
+Full evidence is in `docs/evidence/pandadata-trainable-temporal-models-v080-20260804.md`.
+
+## Temporal Forward Evidence protocol — 2026-08-04
+
+| Command / canary | Observed result |
+|---|---|
+| focused forward store/CLI tests | 8 passed |
+| complete Pytest suite | 176 passed |
+| `python tasks/preflight.py` | success |
+| `python tasks/test.py` | success; complete repository quality gate |
+| Ruff check / format check / strict MyPy | success |
+| frozen forward protocol | LightGBM lag-20/T+5; start 2026-08-04; digest `478d3a749462d9cca022b19c6b676783679a941be8d8b5ec1b3fe9f727553b70` |
+| initial evidence state | 0 predictions; 0 settlements; `WAITING_FOR_FUTURE_DATA`; production `NOT_AUTHORIZED` |
+| `python -m build --no-isolation` | 0.9.0 wheel and sdist built |
+| Twine check | both 0.9.0 artifacts passed |
+| isolated installed-wheel canary | version 0.9.0; public protocol import; `purged-cv-forward init` returned the expected waiting receipt |
+
+The implementation enforces durable prediction recording before label availability and
+append-only T+5 settlement afterwards. Synthetic tests demonstrate `COLLECTING`,
+`READY_FOR_REVIEW`, and `FAIL`, but the real PandaData protocol remains waiting because
+independent future labels do not yet exist. See
+`docs/evidence/pandadata-temporal-forward-protocol-v090-20260804.md`.
+
+## Clean production Skill release — 2026-08-04
+
+| Command / canary | Observed result |
+|---|---|
+| Skill Creator `quick_validate.py` | valid |
+| README/Skill contract tests | passed |
+| complete Pytest suite | 179 passed |
+| `python tasks/preflight.py` / `python tasks/test.py` | success |
+| Ruff check / format check / strict MyPy | success |
+| `python -m build --no-isolation` / Twine | v0.9.0 wheel and sdist passed |
+| installed `purged-cv-skill demo` outside source checkout | success; engine 0.9.0; audit |
+| installed example materialization and run | success |
+| installed strategy demo | validation PASS; research/production FAIL |
+| installed forward init | waiting; not authorized; local-not-notarized scope |
+| repository cleanup | all `.scratch` paths removed from production index and ignored |
+
+The independent forward-test detected a legacy machine-global distribution registration and
+missing PATH entry. Release acceptance therefore relies on the isolated installed v0.9.0
+entrypoints, not an implicit source-tree import. Full evidence is in
+`docs/evidence/clean-production-skill-release-v090-20260804.md`.

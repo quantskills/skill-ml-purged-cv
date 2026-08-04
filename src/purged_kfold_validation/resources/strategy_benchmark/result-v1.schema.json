@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://quantskills.dev/purged-cv/strategy-result-v1.schema.json",
+  "title": "Time-series strategy benchmark result v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "status", "action", "report", "errors"],
+  "properties": {
+    "schema_version": {"const": "1"},
+    "status": {"enum": ["success", "error"]},
+    "action": {"type": ["string", "null"]},
+    "report": {"type": ["object", "null"]},
+    "errors": {"type": "array", "items": {"type": "object"}}
+  }
+}

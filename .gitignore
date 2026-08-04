@@ -13,5 +13,4 @@ dist/
 build/
 *.log
 .DS_Store
-/.scratch/**/runtime/
-/.scratch/wheel-canary-*/
+/.scratch/
