@@ -23,6 +23,7 @@ def test_chinese_readme_covers_complete_public_workflow() -> None:
         "## 一次性最终 Holdout",
         "## 前向证据：真正回答“未来还生效吗”",
         "## 标准结果应该怎样解读",
+        "## 许可证",
     )
     for section in required_sections:
         assert section in readme
@@ -54,6 +55,7 @@ def test_chinese_readme_covers_complete_public_workflow() -> None:
 
     assert "Markdown 是否会生效" not in readme
     assert "tickets 如何拆分" not in readme
+    assert "[MIT License](LICENSE)" in readme
 
 
 def test_skill_metadata_and_progressive_references_cover_v090() -> None:

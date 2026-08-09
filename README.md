@@ -1,5 +1,7 @@
 # skill-ml-purged-cv：金融时序防泄漏交叉验证
 
+> 根目录 `SKILL.md` 是用户和消费端 Agent 的统一入口；`AGENTS.md` 仅用于开发、测试和发布本仓库，不参与 Skill 触发或运行。
+
 `skill-ml-purged-cv` 是面向金融机器学习训练、模型选择和稳健性评估的防泄漏验证工具。项目提供 Purged K-Fold、Embargo、Combinatorial Purged Cross-Validation（CPCV）、Causal Walk-Forward、特征可用性与血缘治理、策略选择过拟合审计、一次性最终 Holdout，以及“预测先登记、标签后结算”的 Temporal Forward Evidence。
 
 它解决的核心问题不是“替用户找到一个赚钱模型”，而是回答一个更基础、也更容易被忽略的问题：**当前模型分数是否因为未来信息、标签区间重叠、全局预处理或错误的验证切分而虚高。**
@@ -685,3 +687,7 @@ purged-cv-forward status --protocol .\protocol.json --store .\private-forward-le
 - `production_authorization=NOT_AUTHORIZED`：本工具没有替用户做生产部署或交易授权。
 
 因此，零 overlap 不能证明模型赚钱；较低 MSE 不能证明可交易；正 Sharpe 不能证明选择过程没有过拟合；`READY_FOR_REVIEW` 也只表示证据足够进入治理审查。
+
+## 许可证
+
+本项目采用 [MIT License](LICENSE)。

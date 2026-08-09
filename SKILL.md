@@ -5,6 +5,18 @@ description: 审计任意金融特征、可训练时序模型或候选策略收�
 
 # 金融时序防泄漏验证
 
+## 什么情况下应该使用这个 Skill
+
+当用户需要判断金融特征、时序模型或候选策略是否存在未来函数、跨折信息泄漏或策略选择过拟合时使用本 Skill。典型场景包括：
+
+- 验证任意上传特征的可用时间、Information Interval、PIT 血缘和 Fold-Local 预处理；
+- 用 Purged K-Fold、Embargo、CPCV 或 Causal Walk-Forward 评估金融时序模型；
+- 比较多组策略参数或候选收益，检查 PBO、DSR、CPCV Path 和 Walk-Forward 排名稳定性；
+- 对冻结模型执行一次性 Governed Holdout，或在标签成熟前登记 Temporal Forward Evidence；
+- 在接受研究结论或生产候选前，生成可审计的结构化防泄漏证据。
+
+不要把本 Skill 用作行情下载器、策略生成器、收益保证或自动上线工具。
+
 始终调用已安装的 `purged_kfold_validation` 实现。不得在本 Skill 或任何 Agent adapter 中复制 splitter、evaluator、特征治理或 Holdout 算法。
 
 ## 快速确认

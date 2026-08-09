@@ -1,6 +1,6 @@
-# Agent contract
+# 开发维护说明（AGENTS.md）
 
-This file is the canonical onboarding and safety contract.
+本文件只面向修改、测试和发布本仓库的开发 Agent，是开发阶段的 onboarding 与安全约束。它不是 Skill 的运行入口，不参与 Skill 触发，也不是普通用户或消费端 Agent 的必读文件；使用本项目能力时应从根目录 `SKILL.md` 开始。
 
 ## Canonical onboarding
 
